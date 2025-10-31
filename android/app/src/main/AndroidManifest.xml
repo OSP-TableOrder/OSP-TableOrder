@@ -1,8 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="table_order"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+       
+       <meta-data
+            android:name="com.kakao.sdk.AppKey"
+            android:value="97a55be72fc06126cad0044f2626bf00"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
