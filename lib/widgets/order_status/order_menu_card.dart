@@ -31,16 +31,21 @@ class OrderMenuCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(14),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // 메뉴 이미지
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
-              width: 72,
-              height: 72,
+              width: 80,
+              height: 80,
               child: menu.menuImageUrl != null
-                  ? Image.network(menu.menuImageUrl!, fit: BoxFit.cover)
+                  ? Image.network(
+                      menu.menuImageUrl!,
+                      fit: BoxFit.cover,
+                      cacheWidth: 144,
+                      cacheHeight: 144,
+                    )
                   : const ColoredBox(color: Color(0xFFF6F7F9)),
             ),
           ),
@@ -48,30 +53,40 @@ class OrderMenuCard extends StatelessWidget {
 
           // 메뉴 정보
           Expanded(
-            child: Opacity(
-              opacity: isCanceled ? 0.4 : 1,
+            child: AnimatedOpacity(
+              opacity: isCanceled ? 0.4 : 1.0,
+              duration: const Duration(milliseconds: 150),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // 메뉴명
                   Text(
                     menu.menuName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
+                      height: 1.1,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
+
                   // 메뉴 설명
                   if (menu.menuDescription != null)
                     Text(
                       menu.menuDescription!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.black54,
+                        height: 1.3,
                       ),
                     ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
+
                   // 메뉴 단품 가격 및 주문 개수
                   Text(
                     '${formatWon(menu.menuPrice)}원 × ${menu.quantity}개',
@@ -81,22 +96,33 @@ class OrderMenuCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
+
                   // 주문 상태
                   OrderStatusTag(status: menu.status),
                 ],
               ),
             ),
           ),
-
           const SizedBox(width: 8),
 
           // 메뉴 취소가 가능한 접수 대기 상태인 경우 삭제 버튼 표시
           if (menu.isCancelable && onTapDelete != null)
-            InkWell(
-              onTap: onTapDelete,
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(Icons.delete_outline, color: Colors.red),
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: Center(
+                child: IconButton(
+                  onPressed: onTapDelete,
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  iconSize: 24,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
+                  splashRadius: 18,
+                  tooltip: '주문 취소',
+                ),
               ),
             ),
         ],

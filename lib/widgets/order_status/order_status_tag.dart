@@ -9,7 +9,7 @@ class OrderStatusTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: status.bg,
         borderRadius: BorderRadius.circular(999),
@@ -18,6 +18,7 @@ class OrderStatusTag extends StatelessWidget {
         status.label,
         style: TextStyle(
           fontSize: 12,
+          height: 1.0,
           color: status.fg,
           fontWeight: FontWeight.w700,
         ),

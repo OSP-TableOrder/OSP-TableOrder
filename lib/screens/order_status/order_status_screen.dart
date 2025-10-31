@@ -44,7 +44,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     while (_alive) {
       await Future.delayed(const Duration(seconds: 3));
       if (!_alive) break;
-      await viewModel.refresh(receiptId: widget.receiptId);
+      await viewModel.refresh();
     }
   }
 

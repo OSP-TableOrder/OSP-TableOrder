@@ -94,9 +94,9 @@ Future<bool?> showConfirmModal(
                               onPressed: isProcessing
                                   ? null
                                   : () => Navigator.of(context).pop(false),
-                              child: const Text(
-                                '취소',
-                                style: TextStyle(color: Colors.red),
+                              child: Text(
+                                cancelText,
+                                style: const TextStyle(color: Colors.red),
                               ),
                             ),
                             // 확인
