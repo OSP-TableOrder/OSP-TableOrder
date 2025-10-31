@@ -51,6 +51,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
   @override
   void dispose() {
     _alive = false;
+    viewModel.dispose();
     super.dispose();
   }
 

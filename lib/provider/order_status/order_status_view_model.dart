@@ -10,7 +10,7 @@ class OrderStatusViewModel extends ChangeNotifier {
 
   String? _receiptId;
 
-  late Order _order;
+  Order _order = Order(id: 0, totalPrice: 0, menus: []);
   Order get order => _order;
 
   int get totalPrice => order.totalPrice;
@@ -102,7 +102,11 @@ class OrderStatusViewModel extends ChangeNotifier {
     final updatedMenus = List<OrderMenu>.from(_order.menus);
     updatedMenus[idx] = target.copyWith(status: OrderMenuStatus.canceled);
 
-    _order = _order.copyWith(menus: updatedMenus);
+    final newTotalPrice = updatedMenus
+        .where((menu) => menu.status != OrderMenuStatus.canceled)
+        .fold<int>(0, (sum, menu) => sum + (menu.menuPrice * menu.quantity));
+    _order = _order.copyWith(menus: updatedMenus, totalPrice: newTotalPrice);
+
     notifyListeners();
   }
 }
