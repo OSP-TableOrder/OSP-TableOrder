@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/MenuItem.dart';
-import '../widgets/QuantityControl.dart';
+import '../models/menu_item.dart';
+import '../widgets/quantity_control.dart';
 
 class MenuDetailScreen extends StatefulWidget {
   final MenuItem item;

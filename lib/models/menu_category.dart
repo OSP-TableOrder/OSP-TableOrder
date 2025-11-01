@@ -1,4 +1,4 @@
-import 'MenuItem.dart';
+import 'menu_item.dart';
 
 class MenuCategory {
   final String name;

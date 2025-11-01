@@ -1,26 +1,20 @@
 import 'package:flutter/material.dart';
 
-import '../models/MenuItem.dart';
-import '../widgets/MenuItemCard.dart';
+import '../models/menu_item.dart';
+import '../widgets/menu_item_card.dart';
 
 final List<Map<String, dynamic>> mockMenuData = [
   {
     'category': '메뉴',
-    'items': [
-      MenuItem(name: '메뉴1', description: '메뉴1 입니다.', price: 10000),
-    ]
+    'items': [MenuItem(name: '메뉴1', description: '메뉴1 입니다.', price: 10000)],
   },
   {
     'category': '뉴메',
-    'items': [
-      MenuItem(name: '뉴메뉴메', description: '뉴메뉴메뉴메', price: 10000),
-    ]
+    'items': [MenuItem(name: '뉴메뉴메', description: '뉴메뉴메뉴메', price: 10000)],
   },
   {
     'category': '음메',
-    'items': [
-      MenuItem(name: '음메음메음메', description: '염소 아닙니다', price: 9999),
-    ]
+    'items': [MenuItem(name: '음메음메음메', description: '염소 아닙니다', price: 9999)],
   },
 ];
 
@@ -36,8 +30,12 @@ class MenuScreen extends StatelessWidget {
     if (displayList.isNotEmpty) return; // 이미 평탄화했다면 스킵
 
     for (var categoryData in mockMenuData) {
-      displayList.add(categoryData['category'] as String); // 카테고리 이름 (String) 추가
-      displayList.addAll(categoryData['items'] as List<MenuItem>); // 메뉴 아이템 (MenuItem) 리스트 추가
+      displayList.add(
+        categoryData['category'] as String,
+      ); // 카테고리 이름 (String) 추가
+      displayList.addAll(
+        categoryData['items'] as List<MenuItem>,
+      ); // 메뉴 아이템 (MenuItem) 리스트 추가
     }
   }
 
