@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:app_links/app_links.dart'; // DeepLink 처리 위한 패키지
-
+import 'package:app_links/app_links.dart'; // DeepLink 처리용 패키지
 import 'dart:async';
 
 import 'provider/store_provider.dart';
 import 'provider/menu_provider.dart';
 import 'routes/app_routes.dart';
-import 'routes/app_routes.dart';
-import 'screens/menu_list_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // 전역에서 화면 이동을 처리하기 위해 사용하는 Key
@@ -65,10 +62,9 @@ class _MyAppState extends State<MyApp> {
       final storeId = uri.queryParameters['storeId'] ?? 'unknown';
       final tableId = uri.queryParameters['tableId'] ?? 'unknown';
 
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (_) => MenuListScreen(storeId: storeId, tableId: tableId),
-        ),
+      navigatorKey.currentState?.pushNamed(
+        AppRoutes.menuList,
+        arguments: {'storeId': storeId, 'tableId': tableId},
       );
     }
   }
@@ -88,21 +84,9 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       navigatorKey: navigatorKey,
-      onGenerateRoute: AppRoutes.onGenerateRoute,
-      initialRoute: AppRoutes.home,
-      routes: AppRoutes.routes,
-      home: const MyHomePage(),
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('홈', style: TextStyle(fontSize: 18))),
+      routes: AppRoutes.routes, // 기본 라우트 등록
+      onGenerateRoute: AppRoutes.onGenerateRoute, // 동적 라우트 처리
+      initialRoute: AppRoutes.home, // 앱 시작 시 '/' 로 이동
     );
   }
 }
