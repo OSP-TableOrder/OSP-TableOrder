@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../screens/MenuDetailScreen.dart';
-import '../models/MenuItem.dart';
+import '../screens/menu_detail_screen.dart';
+import '../models/menu_item.dart';
 
 class MenuItemCard extends StatelessWidget {
   final MenuItem item;
@@ -36,15 +36,12 @@ class MenuItemCard extends StatelessWidget {
                     height: 100,
                     color: Colors.grey[200],
                     child: item.imageUrl != null
-                        ? Image.network(
-                      item.imageUrl!,
-                      fit: BoxFit.cover,
-                    )
+                        ? Image.network(item.imageUrl!, fit: BoxFit.cover)
                         : Icon(
-                      Icons.restaurant,
-                      size: 40,
-                      color: Colors.grey[600],
-                    ),
+                            Icons.restaurant,
+                            size: 40,
+                            color: Colors.grey[600],
+                          ),
                   ),
                 ),
                 SizedBox(width: 16),
@@ -55,7 +52,10 @@ class MenuItemCard extends StatelessWidget {
                     children: [
                       Text(
                         item.name,
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       SizedBox(height: 8),
                       Text(

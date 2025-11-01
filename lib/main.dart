@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:app_links/app_links.dart';    // DeepLink 처리 위한 패키지
-
+import 'package:provider/provider.dart';
+import 'package:app_links/app_links.dart'; // DeepLink 처리용 패키지
 import 'dart:async';
 
+import 'provider/store_provider.dart';
+import 'provider/menu_provider.dart';
 import 'routes/app_routes.dart';
-
-import 'screens/menu_list_screen.dart';
-
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // 전역에서 화면 이동을 처리하기 위해 사용하는 Key
 // DeepLink 사용 시, BuildContext 없이 화면 이동 처리 위해 필요
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => StoreProvider()),
+        ChangeNotifierProvider(create: (_) => MenuProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -42,7 +49,7 @@ class _MyAppState extends State<MyApp> {
       _handleLink(initialLink);
     }
 
-    // 앱이 이미 실행중인 상태였을 경우
+    // 앱이 이미 실행 중인 상태에서 딥링크를 받은 경우
     _linkSub = _appLinks.uriLinkStream.listen((uri) {
       _handleLink(uri);
     });
@@ -55,10 +62,9 @@ class _MyAppState extends State<MyApp> {
       final storeId = uri.queryParameters['storeId'] ?? 'unknown';
       final tableId = uri.queryParameters['tableId'] ?? 'unknown';
 
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (_) => MenuListScreen(storeId: storeId, tableId: tableId),
-        ),
+      navigatorKey.currentState?.pushNamed(
+        AppRoutes.menuList,
+        arguments: {'storeId': storeId, 'tableId': tableId},
       );
     }
   }
@@ -73,29 +79,14 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Table Order',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       navigatorKey: navigatorKey,
-      routes: AppRoutes.routes,
-      home: const MyHomePage(),
+      routes: AppRoutes.routes, // 기본 라우트 등록
+      onGenerateRoute: AppRoutes.onGenerateRoute, // 동적 라우트 처리
+      initialRoute: AppRoutes.home, // 앱 시작 시 '/' 로 이동
     );
   }
 }
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text(
-          '홈',
-          style: TextStyle(fontSize: 18),
-        ),
-      ),
-    );
-  }
-}
-

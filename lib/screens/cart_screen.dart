@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/menu_item.dart';    // TODO - 카트 아이템 목업 - 추후 제거해도 됨
+import '../models/menu_item.dart'; // TODO - 카트 아이템 목업 - 추후 제거해도 됨
 import '../models/cart_item.dart';
 import '../widgets/cart_item_card.dart';
 
@@ -7,22 +7,12 @@ import '../widgets/cart_item_card.dart';
 final List<CartItem> mockCartItems = [
   CartItem(
     id: 1,
-    menuItem: MenuItem(
-      id: 1,
-      name: '메뉴1',
-      description: '메뉴1입니다.',
-      price: 10000
-    ),
+    menuItem: MenuItem(name: '메뉴1', description: '메뉴1입니다.', price: 10000),
     quantity: 1,
   ),
   CartItem(
     id: 2,
-    menuItem: MenuItem(
-      id: 2,
-      name: '메뉴2',
-      description: '메뉴2입니다.',
-      price: 13000
-    ),
+    menuItem: MenuItem(name: '메뉴2', description: '메뉴2입니다.', price: 13000),
     quantity: 4,
   ),
 ];
@@ -35,16 +25,12 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-
-
   void _showOrderConfirmDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           '주문을 완료하시겠어요?',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -59,9 +45,9 @@ class _CartScreenState extends State<CartScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('주문이 완료되었습니다!')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('주문이 완료되었습니다!')));
             },
             child: const Text('주문하기', style: TextStyle(color: Colors.blue)),
           ),
@@ -72,12 +58,17 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final totalPrice =
-    mockCartItems.fold(0, (sum, item) => sum + (item.menuItem.price * item.quantity));
+    final totalPrice = mockCartItems.fold(
+      0,
+      (sum, item) => sum + (item.menuItem.price * item.quantity),
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('장바구니', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '장바구니',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
@@ -89,14 +80,14 @@ class _CartScreenState extends State<CartScreen> {
               children: mockCartItems
                   .map(
                     (item) => CartItemCard(
-                  item: item,
-                  onRemove: () {
-                    setState(() {
-                      mockCartItems.remove(item);
-                    });
-                  },
-                ),
-              )
+                      item: item,
+                      onRemove: () {
+                        setState(() {
+                          mockCartItems.remove(item);
+                        });
+                      },
+                    ),
+                  )
                   .toList(),
             ),
           ),
