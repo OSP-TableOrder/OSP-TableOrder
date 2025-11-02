@@ -53,6 +53,8 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF6299FD),
+            foregroundColor: Colors.white,
             minimumSize: Size(double.infinity, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
