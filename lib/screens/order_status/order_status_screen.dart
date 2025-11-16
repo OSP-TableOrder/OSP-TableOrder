@@ -1,9 +1,7 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import 'package:table_order/utils/won_formatter.dart';
-
 import 'package:table_order/models/order_status/order_menu.dart';
 import 'package:table_order/provider/order_status/order_status_view_model.dart';
 import 'package:table_order/widgets/order_status/order_menu_card.dart';
