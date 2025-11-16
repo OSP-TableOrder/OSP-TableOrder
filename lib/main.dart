@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:app_links/app_links.dart'; // DeepLink 처리용 패키지
 import 'dart:async';
 
+import 'package:table_order/routes/app_routes.dart';
 import 'package:table_order/provider/store_provider.dart';
 import 'package:table_order/provider/menu_provider.dart';
-import 'package:table_order/routes/app_routes.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // 전역에서 화면 이동을 처리하기 위해 사용하는 Key
