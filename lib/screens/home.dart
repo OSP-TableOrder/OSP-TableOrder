@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import 'package:table_order/routes/app_routes.dart';
 import 'package:table_order/provider/store_provider.dart';
-
 import 'package:table_order/widgets/store_item.dart';
 
 class Home extends StatelessWidget {

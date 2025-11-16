@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-  
+
 import 'package:table_order/models/menu_item.dart'; // TODO - 카트 아이템 목업 - 추후 제거해도 됨
 import 'package:table_order/models/cart_item.dart';
-
 import 'package:table_order/widgets/cart_item_card.dart';
-
 // TODO - 카트 아이템 목업 - 추후 제거해도 됨
 final List<CartItem> mockCartItems = [
   CartItem(
