@@ -1,5 +1,5 @@
 // TODO - 메뉴 모델과 연결
-import '../../models/menu_item.dart';
+import 'package:table_order/models/menu_item.dart';
 
 class CartItem {
   final int id;

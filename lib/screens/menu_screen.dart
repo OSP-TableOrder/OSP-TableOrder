@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/menu_item.dart';
-import '../widgets/menu_item_card.dart';
+import 'package:table_order/models/menu_item.dart';
+import 'package:table_order/widgets/menu_item_card.dart';
 
 // 목업 데이터 (나중에 API 연동 시 service/provider 등으로 이동)
 final List<Map<String, dynamic>> mockMenuData = [

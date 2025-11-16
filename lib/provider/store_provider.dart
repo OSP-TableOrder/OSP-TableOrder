@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
+
 import 'package:table_order/service/store_service.dart';
-import '../models/store.dart';
+import 'package:table_order/models/store.dart';
 
 class StoreProvider with ChangeNotifier {
   final StoreService _storeService = StoreService();

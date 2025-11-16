@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+
 import 'package:table_order/provider/menu_provider.dart';
 import 'package:table_order/widgets/menu_item.dart';
 import 'package:table_order/widgets/kakao_map_widget.dart';
