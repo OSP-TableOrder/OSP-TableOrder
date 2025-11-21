@@ -1,4 +1,4 @@
-import 'package:table_order/models/menu.dart';  
+import 'package:table_order/models/menu.dart';
 
 class CartItem {
   final int id;
