@@ -7,7 +7,7 @@ class MenuCategory {
 
   MenuCategory({
     required this.id,
-    required this.name, 
+    required this.name,
     required this.items
   });
 }
