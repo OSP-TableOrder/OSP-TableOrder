@@ -1,28 +1,28 @@
 class Menu {
-  final String menuName;
-  final String menuDescription;
-  final String? menuImageUrl;
-  final int menuPrice;
-  final bool menuIsSoldOut;
-  final bool menuIsRecommended;
-
+  final String name;
+  final String description;
+  final String? imageUrl;
+  final int price;
+  final bool isSoldOut;
+  final bool isRecommended;
+  
   Menu({
-    required this.menuName,
-    required this.menuDescription,
-    this.menuImageUrl,
-    required this.menuPrice,
-    required this.menuIsSoldOut,
-    required this.menuIsRecommended,
+    required this.name,
+    required this.description,
+    this.imageUrl,
+    required this.price,
+    required this.isSoldOut,
+    required this.isRecommended,
   });
 
   factory Menu.fromJson(Map<String, dynamic> json) {
     return Menu(
-      menuName: json['menuName'] ?? '',
-      menuDescription: json['menuDescription'] ?? '',
-      menuImageUrl: json['menuImageUrl'],
-      menuPrice: json['menuPrice'] ?? 0,
-      menuIsSoldOut: json['menuIsSoldOut'] ?? false,
-      menuIsRecommended: json['menuIsRecommended'] ?? false,
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      imageUrl: json['imageUrl'],
+      price: json['price'] ?? 0,
+      isSoldOut: json['isSoldOut'] ?? false,
+      isRecommended: json['isRecommended'] ?? false,
     );
   }
 }
