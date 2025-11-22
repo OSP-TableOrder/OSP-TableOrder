@@ -10,6 +10,7 @@ final List<CartItem> mockCartItems = [
     id: 1,
     menu: Menu(
       id: 1,
+      storeId: 2,
       name: '메뉴1',
       description: '메뉴1입니다.',
       price: 10000,
@@ -22,6 +23,7 @@ final List<CartItem> mockCartItems = [
     id: 2,
     menu: Menu(
       id: 2,
+      storeId: 2,
       name: '메뉴2',
       description: '메뉴2입니다.',
       price: 13000,

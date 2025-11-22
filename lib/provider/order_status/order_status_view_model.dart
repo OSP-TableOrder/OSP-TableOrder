@@ -33,6 +33,7 @@ class OrderStatusViewModel extends ChangeNotifier {
           completedCount: 0,
           menu: Menu(
             id: 1,
+            storeId: 1,
             name: '불고기',
             price: 10000,
             description: '달콤짭잘 불고기, 단짠단짠으로 맛있게 드세요.',
@@ -49,6 +50,7 @@ class OrderStatusViewModel extends ChangeNotifier {
           completedCount: 0,
           menu: Menu(
             id: 2,
+            storeId: 1,
             name: '한우 육회',
             price: 10000,
             description: '고소함 끝판왕, 술이 술술 들어가는 육회',
@@ -65,6 +67,7 @@ class OrderStatusViewModel extends ChangeNotifier {
           completedCount: 0,
           menu: Menu(
             id: 3,
+            storeId: 1,
             name: '닭목살구이',
             price: 15000,
             description: '쫄깃한 식감에 매콤달콤 양념, 우리 가게의 시그니처!',
@@ -81,6 +84,7 @@ class OrderStatusViewModel extends ChangeNotifier {
           completedCount: 0,
           menu: Menu(
             id: 4,
+            storeId: 1,
             name: '닭날개',
             price: 15000,
             description: '너무 맛있어서 하늘을 윙윙 날아갈 것 같은 맛!',
@@ -97,6 +101,7 @@ class OrderStatusViewModel extends ChangeNotifier {
           completedCount: 0,
           menu: Menu(
             id: 5,
+            storeId: 1,
             name: '광광우럭따',
             price: 15000,
             description: '넙치와 우럭을 한 접시에서 맛있게 즐기세요!',

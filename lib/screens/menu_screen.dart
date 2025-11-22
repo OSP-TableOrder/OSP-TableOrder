@@ -10,6 +10,7 @@ final List<Map<String, dynamic>> mockMenuData = [
     'items': [
       Menu(
         id: 1,
+        storeId: 1,
         name: '메뉴1',
         description: '메뉴1 입니다.',
         price: 10000,
@@ -23,6 +24,7 @@ final List<Map<String, dynamic>> mockMenuData = [
     'items': [
       Menu(
         id: 2,
+        storeId: 1,
         name: '뉴메뉴메',
         description: '뉴메뉴메뉴메',
         price: 10000,
@@ -31,6 +33,7 @@ final List<Map<String, dynamic>> mockMenuData = [
       ),
       Menu(
         id: 3,
+        storeId: 1,
         name: '메뉴메뉴',
         description: '메뉴메뉴메뉴',
         price: 22222,
@@ -44,6 +47,7 @@ final List<Map<String, dynamic>> mockMenuData = [
     'items': [
       Menu(
         id: 4,
+        storeId: 1,
         name: '음메음메음메',
         description: '염소 아닙니다',
         price: 9999,
