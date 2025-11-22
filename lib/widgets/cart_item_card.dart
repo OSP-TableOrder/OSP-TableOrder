@@ -45,7 +45,7 @@ class CartItemCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.menuItem.name,
+                      item.menu.name,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -53,12 +53,12 @@ class CartItemCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.menuItem.description,
+                      item.menu.description,
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${item.quantity}개 - ${item.menuItem.price}원',
+                      '${item.quantity}개 - ${item.menu.price}원',
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                   ],
