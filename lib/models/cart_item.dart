@@ -1,16 +1,13 @@
-// TODO - 메뉴 모델과 연결
-import 'package:table_order/models/menu_item.dart';
+import 'package:table_order/models/menu.dart';
 
 class CartItem {
   final int id;
-  // TODO - 메뉴 모델과 연결
-  final MenuItem menuItem;
+  final Menu menu;
   final int quantity;
 
   CartItem({
     required this.id,
-    // TODO - 메뉴 모델과 연결
-    required this.menuItem,
+    required this.menu,
     required this.quantity,
   });
 }

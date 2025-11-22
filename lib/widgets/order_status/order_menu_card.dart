@@ -6,14 +6,14 @@ import 'package:table_order/models/order_status/order_menu.dart';
 import 'package:table_order/widgets/order_status/order_status_tag.dart';
 
 class OrderMenuCard extends StatelessWidget {
-  final OrderMenu menu;
+  final OrderMenu orderMenu;
   final VoidCallback? onTapDelete;
 
-  const OrderMenuCard({super.key, required this.menu, this.onTapDelete});
+  const OrderMenuCard({super.key, required this.orderMenu, this.onTapDelete});
 
   @override
   Widget build(BuildContext context) {
-    final isCanceled = menu.status == OrderMenuStatus.canceled;
+    final isCanceled = orderMenu.status == OrderMenuStatus.canceled;
 
     return Container(
       decoration: BoxDecoration(
@@ -39,9 +39,9 @@ class OrderMenuCard extends StatelessWidget {
             child: SizedBox(
               width: 80,
               height: 80,
-              child: menu.menuImageUrl != null
+              child: orderMenu.menu.imageUrl != null
                   ? Image.network(
-                      menu.menuImageUrl!,
+                      orderMenu.menu.imageUrl!,
                       fit: BoxFit.cover,
                       cacheWidth: 144,
                       cacheHeight: 144,
@@ -62,7 +62,7 @@ class OrderMenuCard extends StatelessWidget {
                 children: [
                   // 메뉴명
                   Text(
-                    menu.menuName,
+                    orderMenu.menu.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -74,9 +74,9 @@ class OrderMenuCard extends StatelessWidget {
                   const SizedBox(height: 4),
 
                   // 메뉴 설명
-                  if (menu.menuDescription != null)
+                  if (orderMenu.menu.description != null)
                     Text(
-                      menu.menuDescription!,
+                      orderMenu.menu.description!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -89,7 +89,7 @@ class OrderMenuCard extends StatelessWidget {
 
                   // 메뉴 단품 가격 및 주문 개수
                   Text(
-                    '${formatWon(menu.menuPrice)}원 × ${menu.quantity}개',
+                    '${formatWon(orderMenu.menu.price)}원 × ${orderMenu.quantity}개',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -98,7 +98,7 @@ class OrderMenuCard extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   // 주문 상태
-                  OrderStatusTag(status: menu.status),
+                  OrderStatusTag(status: orderMenu.status),
                 ],
               ),
             ),
@@ -106,7 +106,7 @@ class OrderMenuCard extends StatelessWidget {
           const SizedBox(width: 8),
 
           // 메뉴 취소가 가능한 접수 대기 상태인 경우 삭제 버튼 표시
-          if (menu.isCancelable && onTapDelete != null)
+          if (orderMenu.isCancelable && onTapDelete != null)
             SizedBox(
               width: 36,
               height: 36,

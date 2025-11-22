@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:table_order/models/menu_item.dart';
+import 'package:table_order/models/menu.dart';
 import 'package:table_order/widgets/quantity_control.dart';
 
 class MenuDetailScreen extends StatefulWidget {
-  final MenuItem item;
+  final Menu item;
 
   const MenuDetailScreen({Key? key, required this.item}) : super(key: key);
 

@@ -125,7 +125,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: OrderMenuCard(
-                                    menu: menu,
+                                    orderMenu: menu,
                                     onTapDelete: menu.isCancelable
                                         ? () async {
                                             final ok = await showConfirmModal(

@@ -9,33 +9,36 @@ class MenuService {
     if (storeId == 1) {
       return [
         Menu(
-          menuName: "치킨dd",
-          menuDescription: "바삭한 후라이드 치킨",
-          menuImageUrl:
+          id: 1,
+          name: "치킨dd",
+          description: "바삭한 후라이드 치킨",
+          imageUrl:
               "https://kumoh-talk-bucket.s3.ap-northeast-2.amazonaws.com/KakaoTalk_20250519_021541789.png",
-          menuPrice: 15000,
-          menuIsSoldOut: false,
-          menuIsRecommended: true,
+          price: 15000,
+          isSoldOut: false,
+          isRecommended: true,
         ),
         Menu(
-          menuName: "생맥주",
-          menuDescription: "시원한 한 잔!",
-          menuImageUrl: null,
-          menuPrice: 5000,
-          menuIsSoldOut: false,
-          menuIsRecommended: false,
+          id: 2,
+          name: "생맥주",
+          description: "시원한 한 잔!",
+          imageUrl: null,
+          price: 5000,
+          isSoldOut: false,
+          isRecommended: false,
         ),
       ];
     }
 
     return [
       Menu(
-        menuName: "모둠안주",
-        menuDescription: "안주를 한번에 즐겨요",
-        menuImageUrl: null,
-        menuPrice: 25000,
-        menuIsSoldOut: false,
-        menuIsRecommended: false,
+        id: 3,
+        name: "모둠안주",
+        description: "안주를 한번에 즐겨요",
+        imageUrl: null,
+        price: 25000,
+        isSoldOut: false,
+        isRecommended: false,
       ),
     ];
   }
