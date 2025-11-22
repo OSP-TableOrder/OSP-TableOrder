@@ -14,7 +14,7 @@ class StoreProvider with ChangeNotifier {
   StoreProvider() {
     // 생성자에서 데이터 초기화
     _stores = _storeService.fetchAllStores();
-  } 
+  }
 
   // 특정 ID로 가게 찾기
   Store? findById(int id) => _storeService.fetchStoreById(id);
