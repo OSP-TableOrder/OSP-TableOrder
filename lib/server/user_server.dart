@@ -9,13 +9,13 @@ class Server {
 
   // Mock API: 모든 가게 가져오기
   Future<List<Store>> getAllStores() async {
-    await Future.delayed(Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
     return mockStores;
   }
 
   // Mock API: 특정 가게 ID로 가게 가져오기
   Future<Store?> getStoreById(int id) async {
-    await Future.delayed(Duration(milliseconds: 300)); // 네트워크 지연 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 300)); // 네트워크 지연 시뮬레이션
     try {
       return mockStores.firstWhere((store) => store.id == id);
     } catch (_) {
@@ -27,19 +27,19 @@ class Server {
 
   // Mock API: 모든 메뉴 가져오기
   Future<List<Menu>> getAllMenus() async {
-    await Future.delayed(Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
     return mockMenus;
   }
   
   // Mock API: 특정 가게의 메뉴 가져오기
   Future<List<Menu>> getMenusByStoreId(int storeId) async {
-    await Future.delayed(Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
     return mockMenus.where((menu) => menu.storeId == storeId).toList();
   }
 
   // Mock API: 메뉴 ID로 특정 메뉴 가져오기
   Future<Menu?> getMenuById(int menuId) async {
-    await Future.delayed(Duration(milliseconds: 300)); // 네트워크 지연 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 300)); // 네트워크 지연 시뮬레이션
     try {
       return mockMenus.firstWhere((menu) => menu.id == menuId);
     } catch (_) {
