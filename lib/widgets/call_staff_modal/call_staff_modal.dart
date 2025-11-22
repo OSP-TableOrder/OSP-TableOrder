@@ -86,7 +86,7 @@ Future<bool?> showCallStaffDialog(
                     maxWidth: 450,
                   ),
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(26, 26, 26, 20),
+                    padding: const EdgeInsets.fromLTRB(26, 26, 26, 20),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -120,25 +120,23 @@ Future<bool?> showCallStaffDialog(
                                   ),
                                 ),
                                 selected: selected.contains(text),
-                                onSelected: (_) => {
-                                  (text) {
-                                    if (selected.contains(text)) {
-                                      selected.remove(text);
-                                    } else {
-                                      selected.add(text);
-                                    }
-                                    if (!messageEditedManually ||
-                                        controller.text == lastAutoMessage) {
-                                      lastAutoMessage = autoMessage();
-                                      controller.text = lastAutoMessage;
-                                      controller.selection =
-                                          TextSelection.collapsed(
-                                            offset: controller.text.length,
-                                          );
-                                      messageEditedManually = false;
-                                    }
-                                    setState(() {});
-                                  },
+                                onSelected: (_) {
+                                  if (selected.contains(text)) {
+                                    selected.remove(text);
+                                  } else {
+                                    selected.add(text);
+                                  }
+                                  if (!messageEditedManually ||
+                                      controller.text == lastAutoMessage) {
+                                    lastAutoMessage = autoMessage();
+                                    controller.text = lastAutoMessage;
+                                    controller.selection =
+                                        TextSelection.collapsed(
+                                          offset: controller.text.length,
+                                        );
+                                    messageEditedManually = false;
+                                  }
+                                  setState(() {});
                                 },
                                 showCheckmark: false,
                                 selectedColor: const Color(0xFF6299FE),
