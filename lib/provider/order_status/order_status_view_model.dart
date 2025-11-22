@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-import '../../models/order_status/order.dart';
-import '../../models/order_status/order_menu.dart';
-import '../../models/order_status/order_menu_status.dart';
+import 'package:table_order/models/order_status/order.dart';
+import 'package:table_order/models/order_status/order_menu.dart';
+import 'package:table_order/models/order_status/order_menu_status.dart';
 
 class OrderStatusViewModel extends ChangeNotifier {
   bool _loading = true;

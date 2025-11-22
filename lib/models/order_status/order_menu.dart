@@ -1,4 +1,4 @@
-import '../../models/order_status/order_menu_status.dart';
+import 'package:table_order/models/order_status/order_menu_status.dart';
 
 class OrderMenu {
   final int id;

@@ -1,4 +1,4 @@
-import 'menu_item.dart';
+import 'package:table_order/models/menu_item.dart';
 
 class MenuCategory {
   final String name;
