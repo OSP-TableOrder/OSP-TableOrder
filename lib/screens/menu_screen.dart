@@ -130,7 +130,7 @@ class MenuScreen extends StatelessWidget {
             // 아이템이 String이면 카테고리 헤더
             return _buildCategoryHeader(item);
           } else if (item is Menu) {
-            // 아이템이 MenuItem이면 메뉴 카드
+            // 아이템이 Menu이면 메뉴 카드
             return MenuItemCard(item: item);
           }
           return SizedBox.shrink();
