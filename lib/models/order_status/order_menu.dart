@@ -7,7 +7,7 @@ class OrderMenu {
   final int quantity;
   final int completedCount;
   // 메뉴 정보
-  final Menu? menu;
+  final Menu menu;
 
   const OrderMenu({
     required this.id,
