@@ -1,13 +1,11 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-import '../../utils/won_formatter.dart';
-
-import '../../models/order_status/order_menu.dart';
-import '../../provider/order_status/order_status_view_model.dart';
-import '../../widgets/order_status/order_menu_card.dart';
-import '../../widgets/confirm_modal/confirm_modal.dart';
+import 'package:table_order/utils/won_formatter.dart';
+import 'package:table_order/models/order_status/order_menu.dart';
+import 'package:table_order/provider/order_status/order_status_view_model.dart';
+import 'package:table_order/widgets/order_status/order_menu_card.dart';
+import 'package:table_order/widgets/confirm_modal/confirm_modal.dart';
 
 class OrderStatusScreen extends StatefulWidget {
   const OrderStatusScreen({super.key, required this.receiptId});

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/cart_item.dart';
+  
+import 'package:table_order/models/cart_item.dart';
 
 class CartItemCard extends StatelessWidget {
   final CartItem item;

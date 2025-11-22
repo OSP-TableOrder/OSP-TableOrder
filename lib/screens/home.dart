@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'package:table_order/routes/app_routes.dart';
 import 'package:table_order/provider/store_provider.dart';
 import 'package:table_order/widgets/store_item.dart';
-import 'package:table_order/routes/app_routes.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});

@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:app_links/app_links.dart'; // DeepLink 처리용 패키지
 import 'dart:async';
 
-import 'provider/store_provider.dart';
-import 'provider/menu_provider.dart';
-import 'routes/app_routes.dart';
+import 'package:table_order/routes/app_routes.dart';
+import 'package:table_order/provider/store_provider.dart';
+import 'package:table_order/provider/menu_provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // 전역에서 화면 이동을 처리하기 위해 사용하는 Key
@@ -84,9 +84,8 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       navigatorKey: navigatorKey,
-      routes: AppRoutes.routes, // 기본 라우트 등록
-      onGenerateRoute: AppRoutes.onGenerateRoute, // 동적 라우트 처리
       initialRoute: AppRoutes.home, // 앱 시작 시 '/' 로 이동
+      onGenerateRoute: AppRoutes.onGenerateRoute, // 동적 라우트 처리
     );
   }
 }
