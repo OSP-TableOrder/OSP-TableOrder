@@ -84,9 +84,8 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       navigatorKey: navigatorKey,
-      routes: AppRoutes.routes, // 기본 라우트 등록
-      onGenerateRoute: AppRoutes.onGenerateRoute, // 동적 라우트 처리
       initialRoute: AppRoutes.home, // 앱 시작 시 '/' 로 이동
+      onGenerateRoute: AppRoutes.onGenerateRoute, // 동적 라우트 처리
     );
   }
 }
