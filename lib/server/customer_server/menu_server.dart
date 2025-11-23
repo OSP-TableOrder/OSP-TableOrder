@@ -32,7 +32,7 @@ class MenuServerStub {
       storeId: 1,
       category: "티",
       name: "얼그레이 티",
-      description: "달콤쌉싸름한 자몽과 얼그레이 티가 만나 향기롭고 달콤하게 즐길 수 있는 티 블렌딩 음료",
+      description: "달콤쌉싸름한 자몽과 얼그레이 티가 만나 향기롭고 달콤한 음료",
       imageUrl:
           "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThd8yCBZNOz2gkEwpY28Ae9mF7phVqTIFZiA&s",
       price: 6000,
