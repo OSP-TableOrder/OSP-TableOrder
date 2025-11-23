@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/models/customer/cart_item.dart';
 import 'package:table_order/widgets/cart_item_card.dart';
+import 'package:table_order/widgets/header_bar.dart';
 
-// TODO - 카트 아이템 목업 - 추후 제거해도 됨
+// TODO - 카트 아이템 목업 - 추후 제거
 final List<CartItem> mockCartItems = [
   CartItem(
     id: 1,
@@ -62,9 +63,8 @@ class _CartScreenState extends State<CartScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('주문이 완료되었습니다!')));
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(const SnackBar(content: Text('주문이 완료되었습니다!')));
             },
             child: const Text('주문하기', style: TextStyle(color: Colors.blue)),
           ),
@@ -81,17 +81,18 @@ class _CartScreenState extends State<CartScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '장바구니',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-      ),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
+          HeaderBar(
+            title: "장바구니",
+            leftItem: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: const Icon(Icons.arrow_back_ios),
+            ),
+          ),
+
+          // 화면 나머지 영역
           Expanded(
             child: ListView(
               children: mockCartItems
