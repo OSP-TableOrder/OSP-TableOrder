@@ -1,4 +1,5 @@
 import 'package:table_order/models/customer/order.dart';
+import 'package:table_order/models/customer/order_menu.dart';
 import 'package:table_order/server/customer_server/order_server.dart';
 
 class OrderService {
@@ -11,6 +12,17 @@ class OrderService {
       throw Exception("주문을 찾을 수 없습니다.");
     }
 
+    return order;
+  }
+
+  Future<Order> addMenu({
+    required String orderId,
+    required OrderMenu menu,
+  }) async {
+    final order = await _server.addMenu(orderId, menu);
+    if (order == null) {
+      throw Exception('주문을 찾을 수 없습니다. (id: $orderId)');
+    }
     return order;
   }
 

@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:table_order/models/customer/order.dart';
-import 'package:table_order/models/customer/order_menu.dart';
-import 'package:table_order/models/customer/order_menu_status.dart';
 import 'package:table_order/service/customer/order_service.dart';
 
 class OrderStatusViewModel extends ChangeNotifier {

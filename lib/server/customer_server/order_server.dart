@@ -41,6 +41,32 @@ class OrderServerStub {
     return _orders[idx];
   }
 
+  Future<Order?> addMenu(String orderId, OrderMenu newMenu) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final orderIndex = _orders.indexWhere((o) => o.id == orderId);
+    if (orderIndex == -1) return null;
+
+    final order = _orders[orderIndex];
+
+    List<OrderMenu> updatedMenus = List<OrderMenu>.from(order.menus);
+
+    updatedMenus.add(newMenu);
+
+    final newTotalPrice = updatedMenus
+        .where((m) => m.status != OrderMenuStatus.canceled)
+        .fold<int>(0, (sum, m) => sum + (m.menu.price * m.quantity));
+
+    final updatedOrder = order.copyWith(
+      menus: updatedMenus,
+      totalPrice: newTotalPrice,
+    );
+
+    _orders[orderIndex] = updatedOrder;
+
+    return updatedOrder;
+  }
+
   Future<Order?> cancelMenu(String orderId, int menuId) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
