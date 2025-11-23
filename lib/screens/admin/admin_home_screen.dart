@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:table_order/provider/admin/order_log_provider.dart';
 import 'package:table_order/widgets/admin/content_area/category_area.dart';
 import 'package:table_order/widgets/admin/content_area/product_area.dart';
 import 'package:table_order/widgets/admin/content_area/table_management_area.dart';
@@ -47,9 +49,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           children: [
             SizedBox(
               height: 56,
-              child: AdminHeaderBar(
-                onMenuPressed: () {
-                  _scaffoldKey.currentState?.openDrawer();
+              child: Consumer<OrderProvider>(
+                builder: (_, __, ___) {
+                  return AdminHeaderBar(
+                    onMenuPressed: () {
+                      _scaffoldKey.currentState?.openDrawer();
+                    },
+                  );
                 },
               ),
             ),
