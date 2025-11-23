@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:table_order/models/menu.dart';
-import 'package:table_order/models/cart_item.dart';
+import 'package:table_order/models/customer/menu.dart';
+import 'package:table_order/models/customer/cart_item.dart';
 import 'package:table_order/widgets/cart_item_card.dart';
 
 // TODO - 카트 아이템 목업 - 추후 제거해도 됨
@@ -10,6 +10,7 @@ final List<CartItem> mockCartItems = [
     id: 1,
     menu: Menu(
       id: 1,
+      storeId: 2,
       name: '메뉴1',
       description: '메뉴1입니다.',
       price: 10000,
@@ -22,6 +23,7 @@ final List<CartItem> mockCartItems = [
     id: 2,
     menu: Menu(
       id: 2,
+      storeId: 2,
       name: '메뉴2',
       description: '메뉴2입니다.',
       price: 13000,

@@ -1,5 +1,5 @@
-import 'package:table_order/models/menu.dart';
-import 'package:table_order/models/order_status/order_menu_status.dart';
+import 'package:table_order/models/customer/menu.dart';
+import 'package:table_order/models/customer/order_menu_status.dart';
 
 class OrderMenu {
   final int id;

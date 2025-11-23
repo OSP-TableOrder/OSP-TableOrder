@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:table_order/models/order_status/order_menu_status.dart';
+import 'package:table_order/models/customer/order_menu_status.dart';
 
 class OrderStatusTag extends StatelessWidget {
   final OrderMenuStatus status;

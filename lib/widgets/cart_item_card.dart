@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-  
-import 'package:table_order/models/cart_item.dart';
+
+import 'package:table_order/models/customer/cart_item.dart';
 
 class CartItemCard extends StatelessWidget {
   final CartItem item;
   final VoidCallback onRemove;
 
-  const CartItemCard({
-    super.key,
-    required this.item,
-    required this.onRemove,
-  });
+  const CartItemCard({super.key, required this.item, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +17,7 @@ class CartItemCard extends StatelessWidget {
       },
       child: Card(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 1,
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -71,7 +65,7 @@ class CartItemCard extends StatelessWidget {
             ],
           ),
         ),
-      )
+      ),
     );
   }
 }

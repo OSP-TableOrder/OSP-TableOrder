@@ -6,8 +6,8 @@ import 'package:table_order/screens/admin/login.dart';
 
 // User
 import 'package:table_order/screens/role_selection_screen.dart';
-import 'package:table_order/screens/menu_screen.dart';
-import 'package:table_order/screens/cart_screen.dart';
+import 'package:table_order/screens/customer/menu_screen.dart';
+import 'package:table_order/screens/customer/cart_screen.dart';
 
 // 앱 전체 라우트 통합 클래스
 class AppRoutes {
@@ -38,7 +38,7 @@ class AppRoutes {
       // User
       case menuList:
         // final args = settings.arguments as Map<String, String>;
-        return MaterialPageRoute(builder: (_) => MenuScreen());
+        return MaterialPageRoute(builder: (_) => MenuScreen(storeId: 1));
 
       case cart:
         return MaterialPageRoute(builder: (_) => const CartScreen());
