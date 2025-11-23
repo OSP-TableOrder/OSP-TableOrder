@@ -1,18 +1,33 @@
 import 'package:flutter/material.dart';
-import '../models/menu_item.dart'; // TODO - 카트 아이템 목업 - 추후 제거해도 됨
-import '../models/cart_item.dart';
-import '../widgets/cart_item_card.dart';
+
+import 'package:table_order/models/menu.dart';
+import 'package:table_order/models/cart_item.dart';
+import 'package:table_order/widgets/cart_item_card.dart';
 
 // TODO - 카트 아이템 목업 - 추후 제거해도 됨
 final List<CartItem> mockCartItems = [
   CartItem(
     id: 1,
-    menuItem: MenuItem(name: '메뉴1', description: '메뉴1입니다.', price: 10000),
+    menu: Menu(
+      id: 1,
+      name: '메뉴1',
+      description: '메뉴1입니다.',
+      price: 10000,
+      isSoldOut: false,
+      isRecommended: true,
+    ),
     quantity: 1,
   ),
   CartItem(
     id: 2,
-    menuItem: MenuItem(name: '메뉴2', description: '메뉴2입니다.', price: 13000),
+    menu: Menu(
+      id: 2,
+      name: '메뉴2',
+      description: '메뉴2입니다.',
+      price: 13000,
+      isSoldOut: false,
+      isRecommended: true,
+    ),
     quantity: 4,
   ),
 ];
@@ -60,7 +75,7 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     final totalPrice = mockCartItems.fold(
       0,
-      (sum, item) => sum + (item.menuItem.price * item.quantity),
+      (sum, item) => sum + (item.menu.price * item.quantity),
     );
 
     return Scaffold(

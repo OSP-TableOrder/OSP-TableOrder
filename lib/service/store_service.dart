@@ -1,4 +1,4 @@
-import '../models/store.dart';
+import 'package:table_order/models/store.dart';
 
 class StoreService {
   // 현재는 로컬 더미 데이터지만, 나중에 API 연동 시 이 부분만 바꾸면 됨

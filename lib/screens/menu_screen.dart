@@ -1,24 +1,56 @@
 import 'package:flutter/material.dart';
 
-import '../models/menu_item.dart';
-import '../widgets/menu_item_card.dart';
+import 'package:table_order/models/menu.dart';
+import 'package:table_order/widgets/menu_item_card.dart';
 
 // 목업 데이터 (나중에 API 연동 시 service/provider 등으로 이동)
 final List<Map<String, dynamic>> mockMenuData = [
   {
     'category': '메뉴',
-    'items': [MenuItem(name: '메뉴1', description: '메뉴1 입니다.', price: 10000)],
+    'items': [
+      Menu(
+        id: 1,
+        name: '메뉴1',
+        description: '메뉴1 입니다.',
+        price: 10000,
+        isSoldOut: false,
+        isRecommended: true,
+      )
+    ],
   },
   {
     'category': '뉴메',
     'items': [
-      MenuItem(name: '뉴메뉴메', description: '뉴메뉴메뉴메', price: 10000),
-      MenuItem(name: '메뉴메뉴', description: '메뉴메뉴메뉴', price: 22222)
+      Menu(
+        id: 2,
+        name: '뉴메뉴메',
+        description: '뉴메뉴메뉴메',
+        price: 10000,
+        isSoldOut: true,
+        isRecommended: false,
+      ),
+      Menu(
+        id: 3,
+        name: '메뉴메뉴',
+        description: '메뉴메뉴메뉴',
+        price: 22222,
+        isSoldOut: false,
+        isRecommended: false,
+      )
     ],
   },
   {
     'category': '음메',
-    'items': [MenuItem(name: '음메음메음메', description: '염소 아닙니다', price: 9999)],
+    'items': [
+      Menu(
+        id: 4,
+        name: '음메음메음메',
+        description: '염소 아닙니다',
+        price: 9999,
+        isSoldOut: true,
+        isRecommended: true,
+      ),
+    ],
   },
 ];
 
@@ -34,7 +66,7 @@ class MenuScreen extends StatelessWidget {
 
     for (var categoryData in mockMenuData) {
       displayList.add(categoryData['category'] as String);
-      displayList.addAll(categoryData['items'] as List<MenuItem>);
+      displayList.addAll(categoryData['items'] as List<Menu>);
     }
   }
 
@@ -97,8 +129,8 @@ class MenuScreen extends StatelessWidget {
           if (item is String) {
             // 아이템이 String이면 카테고리 헤더
             return _buildCategoryHeader(item);
-          } else if (item is MenuItem) {
-            // 아이템이 MenuItem이면 메뉴 카드
+          } else if (item is Menu) {
+            // 아이템이 Menu이면 메뉴 카드
             return MenuItemCard(item: item);
           }
           return SizedBox.shrink();

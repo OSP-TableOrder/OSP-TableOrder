@@ -1,5 +1,6 @@
 // lib/widgets/menu_item.dart
 import 'package:flutter/material.dart';
+
 import 'package:table_order/models/menu.dart';
 
 class Tag extends StatelessWidget {
@@ -40,7 +41,7 @@ class _MenuItemState extends State<MenuItem> {
   bool isPopupOpen = false;
 
   void handleImageClick() {
-    if (widget.menu.menuImageUrl != null) {
+    if (widget.menu.imageUrl != null) {
       setState(() => isPopupOpen = true);
     }
   }
@@ -74,14 +75,14 @@ class _MenuItemState extends State<MenuItem> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0F0F0),
                       borderRadius: BorderRadius.circular(8),
-                      image: menu.menuImageUrl != null
+                      image: menu.imageUrl != null
                           ? DecorationImage(
-                              image: NetworkImage(menu.menuImageUrl!),
+                              image: NetworkImage(menu.imageUrl!),
                               fit: BoxFit.cover,
                             )
                           : null,
                     ),
-                    child: menu.menuImageUrl == null
+                    child: menu.imageUrl == null
                         ? const Icon(
                             Icons.image_not_supported,
                             color: Colors.grey,
@@ -96,7 +97,7 @@ class _MenuItemState extends State<MenuItem> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (menu.menuIsSoldOut)
+                      if (menu.isSoldOut)
                         const Text(
                           "품절",
                           style: TextStyle(
@@ -105,23 +106,23 @@ class _MenuItemState extends State<MenuItem> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                      if (menu.menuIsRecommended) const Tag(content: "주막장 추천!"),
+                      if (menu.isRecommended) const Tag(content: "주막장 추천!"),
                       Text(
-                        menu.menuName,
+                        menu.name,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        menu.menuDescription,
+                        menu.description,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
                       ),
                       Text(
-                        "${menu.menuPrice}원",
+                        "${menu.price}원",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,

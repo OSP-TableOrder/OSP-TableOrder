@@ -10,9 +10,9 @@ import 'package:table_order/provider/admin/order_log_provider.dart';
 import 'package:table_order/provider/admin/product_provider.dart';
 import 'package:table_order/provider/admin/table_provider.dart';
 
-import 'provider/store_provider.dart';
-import 'provider/menu_provider.dart';
-import 'routes/app_routes.dart';
+import 'package:table_order/routes/app_routes.dart';
+import 'package:table_order/provider/store_provider.dart';
+import 'package:table_order/provider/menu_provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

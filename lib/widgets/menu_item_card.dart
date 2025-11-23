@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../screens/menu_detail_screen.dart';
-import '../models/menu_item.dart';
+
+import 'package:table_order/models/menu.dart';
+import 'package:table_order/screens/menu_detail_screen.dart';
 
 class MenuItemCard extends StatelessWidget {
-  final MenuItem item;
+  final Menu item;
 
   const MenuItemCard({Key? key, required this.item}) : super(key: key);
 
