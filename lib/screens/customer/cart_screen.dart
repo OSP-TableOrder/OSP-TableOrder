@@ -52,15 +52,16 @@ class _CartScreenState extends State<CartScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          HeaderBar(
-            title: "장바구니",
-            leftItem: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Icon(Icons.arrow_back_ios),
+      body: SafeArea(
+        child: Column(
+          children: [
+            HeaderBar(
+              title: "장바구니",
+              leftItem: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(Icons.arrow_back_ios),
+              ),
             ),
-          ),
 
           // 화면 나머지 영역
           Expanded(
@@ -102,6 +103,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
