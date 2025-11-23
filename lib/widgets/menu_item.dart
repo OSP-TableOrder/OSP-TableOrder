@@ -1,7 +1,7 @@
 // lib/widgets/menu_item.dart
 import 'package:flutter/material.dart';
 
-import 'package:table_order/models/menu.dart';
+import 'package:table_order/models/customer/menu.dart';
 
 class Tag extends StatelessWidget {
   final String content;

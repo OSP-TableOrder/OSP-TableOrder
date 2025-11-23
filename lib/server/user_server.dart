@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:table_order/models/menu.dart';
-import 'package:table_order/models/store.dart';
-
+import 'package:table_order/models/customer/menu.dart';
+import 'package:table_order/models/customer/store.dart';
 
 class Server {
   /// 가게 관련 API
@@ -30,7 +29,7 @@ class Server {
     await Future.delayed(const Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
     return mockMenus;
   }
-  
+
   // Mock API: 특정 가게의 메뉴 가져오기
   Future<List<Menu>> getMenusByStoreId(int storeId) async {
     await Future.delayed(const Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
@@ -47,7 +46,6 @@ class Server {
     }
   }
 }
-
 
 final List<Menu> mockMenus = [
   Menu(
@@ -82,7 +80,6 @@ final List<Menu> mockMenus = [
     isRecommended: true,
   ),
 ];
-
 
 final List<Store> mockStores = [
   Store(
