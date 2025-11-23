@@ -111,32 +111,6 @@ class MenuScreen extends StatelessWidget {
       
       body: Column(
         children: [
-          HeaderBar(
-            title: "메뉴 주문하기",
-            leftItem: TextButton(
-              onPressed: () {
-                // TODO: 주문현황 페이지로 이동
-                // Navigator.push(context, MaterialPageRoute(builder: (_) => OrderStatusScreen()));
-                print('주문현황 클릭');
-              },
-              child: Text(
-                "주문현황",
-                style: TextStyle(color: Colors.blue[700], fontSize: 16),
-              ),
-            ),
-            rightItem: TextButton(
-              onPressed: () {
-                // TODO: 직원호출 페이지로 이동
-                // Navigator.push(context, MaterialPageRoute(builder: (_) => StaffCallScreen()));
-                print("직원호출 클릭");
-              },
-              child: Text(
-                "직원호출",
-                style: TextStyle(color: Colors.blue[700], fontSize: 16),
-              ),
-            ),
-          ),
-
           Expanded(
             child: (menuProvider.isLoading && displayList.isEmpty)
               ? const Center(child: CircularProgressIndicator())
