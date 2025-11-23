@@ -15,8 +15,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   webview_flutter: ^4.13.0
   provider: ^6.1.5+1
-
-  app_links: ^3.5.1   # Flutter DeepLink 처리
+  app_links: ^3.5.1 # Flutter DeepLink 처리
 
 dev_dependencies:
   flutter_test:
@@ -25,6 +24,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/kakaomap.html
