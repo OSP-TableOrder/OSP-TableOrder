@@ -1,12 +1,14 @@
-import 'package:table_order/models/order_status/order_menu.dart';
+import 'package:table_order/models/customer/order_menu.dart';
 
 class Order {
-  final int id;
+  final String id;
+  final int storeId;
   final int totalPrice;
   final List<OrderMenu> menus;
 
   const Order({
     required this.id,
+    required this.storeId,
     required this.totalPrice,
     required this.menus,
   });
@@ -14,6 +16,7 @@ class Order {
   Order copyWith({int? totalPrice, List<OrderMenu>? menus}) {
     return Order(
       id: id,
+      storeId: storeId,
       totalPrice: totalPrice ?? this.totalPrice,
       menus: menus ?? this.menus,
     );

@@ -1,5 +1,7 @@
 class Menu {
   final int id;
+  final int storeId;
+  final String? category;
   final String name;
   final String description;
   final String? imageUrl;
@@ -9,6 +11,8 @@ class Menu {
 
   Menu({
     required this.id,
+    required this.storeId,
+    this.category,
     required this.name,
     required this.description,
     this.imageUrl,
@@ -20,6 +24,8 @@ class Menu {
   factory Menu.fromJson(Map<String, dynamic> json) {
     return Menu(
       id: json['id'] ?? 0,
+      storeId: json['storeId'] ?? 0,
+      category: json['category'] ?? '',
       name: json['name'] ?? '',
       description: json['description'] ?? '',
       imageUrl: json['imageUrl'],

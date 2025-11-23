@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:table_order/models/menu.dart';
-import 'package:table_order/screens/menu_detail_screen.dart';
+import 'package:table_order/models/customer/menu.dart';
+import 'package:table_order/screens/customer/menu_detail_screen.dart';
 
 class MenuItemCard extends StatelessWidget {
   final Menu item;

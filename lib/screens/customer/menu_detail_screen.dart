@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:table_order/models/menu.dart';
+import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/widgets/quantity_control.dart';
 import 'package:table_order/widgets/header_bar.dart';
 

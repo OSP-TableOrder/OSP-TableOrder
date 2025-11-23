@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:table_order/utils/won_formatter.dart';
-import 'package:table_order/models/order_status/order_menu.dart';
-import 'package:table_order/provider/order_status/order_status_view_model.dart';
+import 'package:table_order/models/customer/order_menu.dart';
+import 'package:table_order/provider/customer/order_provider.dart';
 import 'package:table_order/widgets/order_status/order_menu_card.dart';
 import 'package:table_order/widgets/confirm_modal/confirm_modal.dart';
 import 'package:table_order/widgets/header_bar.dart';
