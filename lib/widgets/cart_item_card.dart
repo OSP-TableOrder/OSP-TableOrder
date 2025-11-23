@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-  
 import 'package:table_order/models/cart_item.dart';
 
 class CartItemCard extends StatelessWidget {
@@ -17,7 +16,7 @@ class CartItemCard extends StatelessWidget {
     return InkWell(
       onTap: () {
         // TODO: 메뉴 상세 페이지로 이동
-        // Navigator.pushNamed(context, '/menuDetail', arguments: item.menuItem.id);
+        // Navigator.pushNamed(context, '/menuDetail', arguments: item.menu.id);
       },
       child: Card(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -25,6 +24,7 @@ class CartItemCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         elevation: 1,
+        color: Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Row(
@@ -39,7 +39,9 @@ class CartItemCard extends StatelessWidget {
                 ),
                 child: const Icon(Icons.restaurant, color: Colors.grey),
               ),
+
               const SizedBox(width: 12),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,11 +61,14 @@ class CartItemCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${item.quantity}개 - ${item.menu.price}원',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
+
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: onRemove,
@@ -71,7 +76,7 @@ class CartItemCard extends StatelessWidget {
             ],
           ),
         ),
-      )
+      ),
     );
   }
 }
