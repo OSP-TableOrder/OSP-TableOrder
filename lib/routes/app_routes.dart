@@ -5,10 +5,8 @@ import 'package:table_order/screens/admin/admin_home_screen.dart';
 import 'package:table_order/screens/admin/login.dart';
 
 // User
-import 'package:table_order/screens/home.dart';
 import 'package:table_order/screens/role_selection_screen.dart';
-import 'package:table_order/screens/store_detail.dart';
-import 'package:table_order/screens/menu_list_screen.dart';
+import 'package:table_order/screens/menu_screen.dart';
 import 'package:table_order/screens/cart_screen.dart';
 
 // 앱 전체 라우트 통합 클래스
@@ -19,10 +17,10 @@ class AppRoutes {
   static const String adminLogin = '/admin/login';
 
   // 고객용 라우트
-  static const String home = '/home';
-  static const String storeDetail = '/store/detail';
-  static const String menuList = '/menu/list';
-  static const String cart = '/cart';
+  static const String menuList = '/user/menuList';
+  static const String cart = '/user/cart';
+  static const String orderLog = '/user/order';
+  static const String callStaff = '/user/callStaff';
 
   /// MaterialApp → onGenerateRoute
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -38,21 +36,9 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const LoginScreen());
 
       // User
-      case home:
-        return MaterialPageRoute(builder: (_) => const Home());
-
-      case storeDetail:
-        final storeId = settings.arguments as int;
-        return MaterialPageRoute(builder: (_) => StoreDetail(storeId: storeId));
-
       case menuList:
-        final args = settings.arguments as Map<String, String>;
-        return MaterialPageRoute(
-          builder: (_) => MenuListScreen(
-            storeId: args['storeId']!,
-            tableId: args['tableId']!,
-          ),
-        );
+        // final args = settings.arguments as Map<String, String>;
+        return MaterialPageRoute(builder: (_) => MenuScreen());
 
       case cart:
         return MaterialPageRoute(builder: (_) => const CartScreen());

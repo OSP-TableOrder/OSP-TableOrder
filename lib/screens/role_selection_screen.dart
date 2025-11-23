@@ -16,7 +16,7 @@ class RoleSelectionScreen extends StatelessWidget {
               title: "사장",
               color: Colors.orange.shade300,
               onTap: () {
-                Navigator.pushNamed(context, '/login');
+                Navigator.pushNamed(context, '/admin/login');
               },
             ),
 
@@ -26,7 +26,11 @@ class RoleSelectionScreen extends StatelessWidget {
               title: "사용자",
               color: Colors.blue.shade300,
               onTap: () {
-                Navigator.pushNamed(context, '/userHome');
+                Navigator.pushNamed(
+                  context,
+                  '/user/menuList',
+                  arguments: {'storeId': 'default', 'tableId': 'default'},
+                );
               },
             ),
           ],

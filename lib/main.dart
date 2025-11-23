@@ -95,7 +95,7 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       navigatorKey: navigatorKey,
-      routes: AppRoutes.routes,
+      onGenerateRoute: AppRoutes.onGenerateRoute,
       initialRoute: AppRoutes.roleSelection,
     );
   }

@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
 
                           if (ok && mounted) {
-                            Navigator.pushNamed(context, "/adminHome");
+                            Navigator.pushNamed(context, "/admin/home");
                           }
                         }
                       : null,
