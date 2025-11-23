@@ -72,7 +72,24 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
               width: double.infinity,
               color: Colors.grey[100],
               child: widget.item.imageUrl != null
-                  ? Image.network(widget.item.imageUrl!, fit: BoxFit.cover)
+                  ? Image.network(
+                      widget.item.imageUrl!,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(Icons.restaurant, size: 100, color: Colors.grey[400]);
+                      },
+                    )
                   : Icon(Icons.restaurant, size: 100, color: Colors.grey[400]),
             ),
 
