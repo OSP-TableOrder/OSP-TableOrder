@@ -6,7 +6,6 @@ import 'package:table_order/models/customer/order_menu.dart';
 import 'package:table_order/provider/customer/order_provider.dart';
 import 'package:table_order/widgets/order_status/order_menu_card.dart';
 import 'package:table_order/widgets/confirm_modal/confirm_modal.dart';
-import 'package:table_order/widgets/header_bar.dart';
 
 class OrderStatusScreen extends StatefulWidget {
   const OrderStatusScreen({super.key, required this.receiptId});
@@ -69,6 +68,15 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text(
+          '주문 현황',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+      ),
       body: SafeArea(
         child: AnimatedBuilder(
           animation: viewModel,
@@ -88,15 +96,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  HeaderBar(
-                    title: "주문 현황",
-                    leftItem: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.arrow_back_ios),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
                   // 주문 번호
                   Text(

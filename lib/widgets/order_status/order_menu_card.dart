@@ -45,6 +45,15 @@ class OrderMenuCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       cacheWidth: 144,
                       cacheHeight: 144,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const ColoredBox(color: Color(0xFFF6F7F9));
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      },
                     )
                   : const ColoredBox(color: Color(0xFFF6F7F9)),
             ),

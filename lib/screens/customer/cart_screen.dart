@@ -1,39 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/models/customer/cart_item.dart';
 import 'package:table_order/widgets/cart_item_card.dart';
 import 'package:table_order/widgets/header_bar.dart';
-
-// TODO - 카트 아이템 목업 - 추후 제거
-final List<CartItem> mockCartItems = [
-  CartItem(
-    id: 1,
-    menu: Menu(
-      id: 1,
-      storeId: 2,
-      name: '메뉴1',
-      description: '메뉴1입니다.',
-      price: 10000,
-      isSoldOut: false,
-      isRecommended: true,
-    ),
-    quantity: 1,
-  ),
-  CartItem(
-    id: 2,
-    menu: Menu(
-      id: 2,
-      storeId: 2,
-      name: '메뉴2',
-      description: '메뉴2입니다.',
-      price: 13000,
-      isSoldOut: false,
-      isRecommended: true,
-    ),
-    quantity: 4,
-  ),
-];
+import 'package:table_order/provider/customer/cart_provider.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -75,44 +46,49 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final totalPrice = mockCartItems.fold(
-      0,
-      (sum, item) => sum + (item.menu.price * item.quantity),
-    );
+    final cartProvider = context.watch<CartProvider>();
+    final cartItems = cartProvider.items;
+    final totalPrice = cartProvider.totalPrice;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          HeaderBar(
-            title: "장바구니",
-            leftItem: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Icon(Icons.arrow_back_ios),
+      body: SafeArea(
+        child: Column(
+          children: [
+            HeaderBar(
+              title: "장바구니",
+              leftItem: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(Icons.arrow_back_ios),
+              ),
             ),
-          ),
 
           // 화면 나머지 영역
           Expanded(
-            child: ListView(
-              children: mockCartItems
-                  .map(
-                    (item) => CartItemCard(
-                      item: item,
-                      onRemove: () {
-                        setState(() {
-                          mockCartItems.remove(item);
-                        });
-                      },
+            child: cartItems.isEmpty
+                ? const Center(
+                    child: Text(
+                      '장바구니가 비어있습니다.',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   )
-                  .toList(),
-            ),
+                : ListView(
+                    children: cartItems
+                        .map(
+                          (item) => CartItemCard(
+                            item: item,
+                            onRemove: () {
+                              cartProvider.removeItem(item.id);
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: ElevatedButton(
-              onPressed: mockCartItems.isEmpty ? null : _showOrderConfirmDialog,
+              onPressed: cartItems.isEmpty ? null : _showOrderConfirmDialog,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[500],
                 minimumSize: const Size(double.infinity, 56),
@@ -121,12 +97,13 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
               child: Text(
-                '${mockCartItems.length}개 주문하기 - $totalPrice원',
+                '${cartItems.length}개 주문하기 - $totalPrice원',
                 style: const TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
           ),
         ],
+        ),
       ),
     );
   }

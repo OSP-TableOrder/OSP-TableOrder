@@ -16,38 +16,35 @@ class HeaderBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            bottom: BorderSide(color: Colors.black12),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.black12),
         ),
-        child: Row(
-          children: [
-            // 왼쪽
-            leftItem ?? const SizedBox(width: 40),
+      ),
+      child: Row(
+        children: [
+          // 왼쪽
+          leftItem ?? const SizedBox(width: 40),
 
-            // 가운데(항상 중앙 유지)
-            Expanded(
-              child: Center(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+          // 가운데(항상 중앙 유지)
+          Expanded(
+            child: Center(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
+          ),
 
-            // 오른쪽
-            rightItem ?? const SizedBox(width: 40),
-          ],
-        ),
+          // 오른쪽
+          rightItem ?? const SizedBox(width: 40),
+        ],
       ),
     );
   }

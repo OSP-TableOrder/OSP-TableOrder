@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/widgets/quantity_control.dart';
 import 'package:table_order/widgets/header_bar.dart';
+import 'package:table_order/provider/customer/cart_provider.dart';
 
 class MenuDetailScreen extends StatefulWidget {
   final Menu item;
@@ -40,9 +42,15 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
         padding: const EdgeInsets.all(16.0),
         child: ElevatedButton(
           onPressed: () {
-            // TODO: 장바구니에 아이템과 수량(_quantity)을 담는 로직
-            print('${widget.item.name} $_quantity개 담기');
+            final cartProvider = context.read<CartProvider>();
+            cartProvider.addItem(widget.item, _quantity);
             Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${widget.item.name} $_quantity개가 장바구니에 추가되었습니다.'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6299FD),
@@ -76,7 +84,24 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
               width: double.infinity,
               color: Colors.grey[100],
               child: widget.item.imageUrl != null
-                  ? Image.network(widget.item.imageUrl!, fit: BoxFit.cover)
+                  ? Image.network(
+                      widget.item.imageUrl!,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(Icons.restaurant, size: 100, color: Colors.grey[400]);
+                      },
+                    )
                   : Icon(Icons.restaurant, size: 100, color: Colors.grey[400]),
             ),
 

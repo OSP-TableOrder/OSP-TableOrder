@@ -32,6 +32,24 @@ class StoreItem extends StatelessWidget {
               width: 80,
               height: 80,
               fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 80,
+                  height: 80,
+                  color: Colors.grey[200],
+                  child: const Icon(
+                    Icons.store,
+                    size: 40,
+                    color: Colors.grey,
+                  ),
+                );
+              },
             ),
           ),
 

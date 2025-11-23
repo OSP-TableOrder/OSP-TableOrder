@@ -69,26 +69,36 @@ class _MenuItemState extends State<MenuItem> {
                 // 이미지
                 GestureDetector(
                   onTap: handleImageClick,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 120,
+                      height: 120,
                       color: const Color(0xFFF0F0F0),
-                      borderRadius: BorderRadius.circular(8),
-                      image: menu.imageUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(menu.imageUrl!),
+                      child: menu.imageUrl != null
+                          ? Image.network(
+                              menu.imageUrl!,
                               fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.grey,
+                                  size: 40,
+                                );
+                              },
                             )
-                          : null,
+                          : const Icon(
+                              Icons.image_not_supported,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
                     ),
-                    child: menu.imageUrl == null
-                        ? const Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey,
-                            size: 40,
-                          )
-                        : null,
                   ),
                 ),
                 const SizedBox(width: 10),
