@@ -1,15 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:app_links/app_links.dart'; // DeepLink 처리용 패키지
-import 'dart:async';
+import 'package:app_links/app_links.dart';
+
+import 'package:table_order/provider/admin/call_staff_provider.dart';
+import 'package:table_order/provider/admin/category_provider.dart';
+import 'package:table_order/provider/admin/login_provider.dart';
+import 'package:table_order/provider/admin/order_log_provider.dart';
+import 'package:table_order/provider/admin/product_provider.dart';
+import 'package:table_order/provider/admin/table_provider.dart';
 
 import 'package:table_order/routes/app_routes.dart';
 import 'package:table_order/provider/store_provider.dart';
 import 'package:table_order/provider/menu_provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-// 전역에서 화면 이동을 처리하기 위해 사용하는 Key
-// DeepLink 사용 시, BuildContext 없이 화면 이동 처리 위해 필요
 
 void main() {
   runApp(
@@ -17,6 +22,12 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => StoreProvider()),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
+        ChangeNotifierProvider(create: (_) => CategoryProvider()),
+        ChangeNotifierProvider(create: (_) => TableProvider()),
+        ChangeNotifierProvider(create: (_) => LoginProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => CallStaffProvider()),
       ],
       child: const MyApp(),
     ),
@@ -31,7 +42,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late final AppLinks _appLinks; // listener 객체
+  late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSub;
 
   @override
@@ -43,20 +54,20 @@ class _MyAppState extends State<MyApp> {
   Future<void> _initDeepLink() async {
     _appLinks = AppLinks();
 
-    // 앱이 꺼진 상태에서 딥링크를 통해 실행된 경우
+    // 앱이 꺼진 상태에서 링크로 실행될 때
     final Uri? initialLink = await _appLinks.getInitialAppLink();
     if (initialLink != null) {
       _handleLink(initialLink);
     }
 
-    // 앱이 이미 실행 중인 상태에서 딥링크를 받은 경우
+    // 실행 중에 링크가 들어올 때
     _linkSub = _appLinks.uriLinkStream.listen((uri) {
       _handleLink(uri);
     });
   }
 
   void _handleLink(Uri uri) {
-    print('DeepLink : $uri');
+    print("DeepLink : $uri");
 
     if (uri.host == 'menulist') {
       final storeId = uri.queryParameters['storeId'] ?? 'unknown';
@@ -84,8 +95,8 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       navigatorKey: navigatorKey,
-      initialRoute: AppRoutes.home, // 앱 시작 시 '/' 로 이동
-      onGenerateRoute: AppRoutes.onGenerateRoute, // 동적 라우트 처리
+      onGenerateRoute: AppRoutes.onGenerateRoute,
+      initialRoute: AppRoutes.roleSelection,
     );
   }
 }
