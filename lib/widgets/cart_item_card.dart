@@ -24,14 +24,36 @@ class CartItemCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: 80,
+                  height: 80,
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
+                  child: item.menu.imageUrl != null
+                      ? Image.network(
+                          item.menu.imageUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.restaurant,
+                              color: Colors.grey,
+                              size: 40,
+                            );
+                          },
+                        )
+                      : const Icon(
+                          Icons.restaurant,
+                          color: Colors.grey,
+                          size: 40,
+                        ),
                 ),
-                child: const Icon(Icons.restaurant, color: Colors.grey),
               ),
 
               const SizedBox(width: 12),

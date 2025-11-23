@@ -5,6 +5,7 @@ import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/widgets/header_bar.dart';
 import 'package:table_order/widgets/menu_item_card.dart';
 import 'package:table_order/provider/customer/menu_provider.dart';
+import 'package:table_order/provider/customer/cart_provider.dart';
 import 'package:table_order/screens/customer/order_status_screen.dart';
 import 'package:table_order/widgets/call_staff_modal/call_staff_modal.dart';
 import 'package:table_order/provider/admin/call_staff_provider.dart';
@@ -101,11 +102,46 @@ class MenuScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToCart(context),
-        backgroundColor: Color(0xFF6299FD),
-        foregroundColor: Colors.white,
-        child: Icon(Icons.shopping_cart),
+      floatingActionButton: Consumer<CartProvider>(
+        builder: (context, cartProvider, child) {
+          final itemCount = cartProvider.itemCount;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              FloatingActionButton(
+                onPressed: () => _navigateToCart(context),
+                backgroundColor: Color(0xFF6299FD),
+                foregroundColor: Colors.white,
+                child: Icon(Icons.shopping_cart),
+              ),
+              if (itemCount > 0)
+                Positioned(
+                  right: -4,
+                  top: -4,
+                  child: Container(
+                    padding: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    child: Text(
+                      itemCount > 99 ? '99+' : '$itemCount',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
 
       
