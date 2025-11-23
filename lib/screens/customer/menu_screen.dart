@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:table_order/models/customer/menu.dart';
+import 'package:table_order/widgets/header_bar.dart';
 import 'package:table_order/widgets/menu_item_card.dart';
 import 'package:table_order/provider/customer/menu_provider.dart';
 
@@ -89,22 +90,6 @@ class MenuScreen extends StatelessWidget {
           ),
         ],
       ),
-
-      body: (menuProvider.isLoading && displayList.isEmpty)
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: displayList.length,
-              itemBuilder: (context, index) {
-                final item = displayList[index];
-
-                if (item is String) {
-                  return _buildCategoryHeader(item);
-                } else if (item is Menu) {
-                  return MenuItemCard(item: item);
-                }
-                return SizedBox.shrink();
-              },
-            ),
     );
   }
 
