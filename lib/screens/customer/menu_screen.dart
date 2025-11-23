@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:table_order/models/customer/menu.dart';
+import 'package:table_order/widgets/header_bar.dart';
 import 'package:table_order/widgets/menu_item_card.dart';
 import 'package:table_order/provider/customer/menu_provider.dart';
 import 'package:table_order/screens/customer/order_status_screen.dart';
@@ -106,21 +107,55 @@ class MenuScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         child: Icon(Icons.shopping_cart),
       ),
-      body: (menuProvider.isLoading && displayList.isEmpty)
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: displayList.length,
-              itemBuilder: (context, index) {
-                final item = displayList[index];
 
-                if (item is String) {
-                  return _buildCategoryHeader(item);
-                } else if (item is Menu) {
-                  return MenuItemCard(item: item);
-                }
-                return SizedBox.shrink();
+      
+      body: Column(
+        children: [
+          HeaderBar(
+            title: "메뉴 주문하기",
+            leftItem: TextButton(
+              onPressed: () {
+                // TODO: 주문현황 페이지로 이동
+                // Navigator.push(context, MaterialPageRoute(builder: (_) => OrderStatusScreen()));
+                print('주문현황 클릭');
               },
+              child: Text(
+                "주문현황",
+                style: TextStyle(color: Colors.blue[700], fontSize: 16),
+              ),
             ),
+            rightItem: TextButton(
+              onPressed: () {
+                // TODO: 직원호출 페이지로 이동
+                // Navigator.push(context, MaterialPageRoute(builder: (_) => StaffCallScreen()));
+                print("직원호출 클릭");
+              },
+              child: Text(
+                "직원호출",
+                style: TextStyle(color: Colors.blue[700], fontSize: 16),
+              ),
+            ),
+          ),
+
+          Expanded(
+            child: (menuProvider.isLoading && displayList.isEmpty)
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                  itemCount: displayList.length,
+                  itemBuilder: (context, index) {
+                    final item = displayList[index];
+
+                    if (item is String) {
+                      return _buildCategoryHeader(item);
+                    } else if (item is Menu) {
+                      return MenuItemCard(item: item);
+                    }
+                    return SizedBox.shrink();
+                  },
+                ),
+          ),
+        ],
+      ),
     );
   }
 
