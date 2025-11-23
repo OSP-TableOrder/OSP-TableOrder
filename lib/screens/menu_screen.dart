@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:table_order/models/menu.dart';
 import 'package:table_order/widgets/menu_item_card.dart';
+import 'package:table_order/widgets/header_bar.dart';
 
-// 목업 데이터 (나중에 API 연동 시 service/provider 등으로 이동)
+// 목업 데이터
 final List<Map<String, dynamic>> mockMenuData = [
   {
     'category': '메뉴',
@@ -76,65 +77,64 @@ class MenuScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.white,
-        leading: TextButton(
-          onPressed: () {
-            // TODO: 주문현황 페이지로 이동
-            // Navigator.push(context, MaterialPageRoute(builder: (_) => OrderStatusScreen()));
-            print('주문현황 클릭');
-          },
-          child: Text(
-            '주문현황',
-            style: TextStyle(color: Colors.blue[700], fontSize: 16),
+
+      body: Column(
+        children: [
+          HeaderBar(
+            title: "메뉴 주문하기",
+            leftItem: TextButton(
+              onPressed: () {
+                // TODO: 주문현황 페이지로 이동
+                // Navigator.push(context, MaterialPageRoute(builder: (_) => OrderStatusScreen()));
+                print('주문현황 클릭');
+              },
+              child: Text(
+                "주문현황",
+                style: TextStyle(color: Colors.blue[700], fontSize: 16),
+              ),
+            ),
+            rightItem: TextButton(
+              onPressed: () {
+                // TODO: 직원호출 페이지로 이동
+                // Navigator.push(context, MaterialPageRoute(builder: (_) => StaffCallScreen()));
+                print("직원호출 클릭");
+              },
+              child: Text(
+                "직원호출",
+                style: TextStyle(color: Colors.blue[700], fontSize: 16),
+              ),
+            ),
           ),
-        ),
-        leadingWidth: 100,
-        title: Text(
-          '메뉴 주문하기',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: () {
-              // TODO: 직원호출 페이지로 이동
-              // Navigator.push(context, MaterialPageRoute(builder: (_) => StaffCallScreen()));
-              print('직원호출 클릭');
-            },
-            child: Text(
-              '직원호출',
-              style: TextStyle(color: Colors.blue[700], fontSize: 16),
+
+          Expanded(
+            child: ListView.builder(
+              itemCount: displayList.length,
+              itemBuilder: (context, index) {
+                final item = displayList[index];
+                
+                if (item is String) {
+                  // 아이템이 String이면 카테고리 헤더
+                  return _buildCategoryHeader(item);
+                } else if (item is Menu) {
+                  // 아이템이 Menu이면 메뉴 카드
+                  return MenuItemCard(item: item);
+                }
+                return const SizedBox.shrink();
+              },
             ),
           ),
         ],
       ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // TODO: 장바구니 페이지로 이동
           // Navigator.push(context, MaterialPageRoute(builder: (_) => CartScreen()));
           print('장바구니 클릭');
         },
-        backgroundColor: Color(0xFF6299FD),
+        backgroundColor: const Color(0xFF6299FD),
         foregroundColor: Colors.white,
-        child: Icon(Icons.shopping_cart),
-      ),
-      body: ListView.builder(
-        itemCount: displayList.length,
-        itemBuilder: (context, index) {
-          final item = displayList[index];
-
-          if (item is String) {
-            // 아이템이 String이면 카테고리 헤더
-            return _buildCategoryHeader(item);
-          } else if (item is Menu) {
-            // 아이템이 Menu이면 메뉴 카드
-            return MenuItemCard(item: item);
-          }
-          return SizedBox.shrink();
-        },
+        child: const Icon(Icons.shopping_cart),
       ),
     );
   }
@@ -144,7 +144,7 @@ class MenuScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 10.0),
       child: Text(
         title,
-        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
       ),
     );
   }

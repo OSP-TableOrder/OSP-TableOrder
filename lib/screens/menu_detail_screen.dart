@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:table_order/models/menu.dart';
 import 'package:table_order/widgets/quantity_control.dart';
+import 'package:table_order/widgets/header_bar.dart';
 
 class MenuDetailScreen extends StatefulWidget {
   final Menu item;
@@ -33,11 +34,6 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(widget.item.name),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
 
       bottomNavigationBar: Container(
         color: Colors.white,
@@ -48,17 +44,17 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
             print('${widget.item.name} $_quantity개 담기');
             Navigator.pop(context);
           },
-          child: Text(
-            '메뉴 담기 ($_quantity개)',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF6299FD),
+            backgroundColor: const Color(0xFF6299FD),
             foregroundColor: Colors.white,
-            minimumSize: Size(double.infinity, 50),
+            minimumSize: const Size(double.infinity, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+          ),
+          child: Text(
+            '메뉴 담기 ($_quantity개)',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -67,6 +63,14 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            HeaderBar(
+              title: widget.item.name,
+              leftItem: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(Icons.arrow_back_ios),
+              ),
+            ),
+
             Container(
               height: 300,
               width: double.infinity,
@@ -83,17 +87,23 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                 children: [
                   Text(
                     widget.item.name,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     widget.item.description,
                     style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     '${widget.item.price}원',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -108,7 +118,10 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                 children: [
                   Text(
                     '주문 수량 $_quantity개',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   QuantityControl(
                     onDecrement: _decrementQuantity,
