@@ -37,6 +37,18 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
+      // ⭐ HeaderBar를 appBar로 이동
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: HeaderBar(
+          title: widget.item.name,
+          leftItem: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: const Icon(Icons.arrow_back_ios),
+          ),
+        ),
+      ),
+
       bottomNavigationBar: Container(
         color: Colors.white,
         padding: const EdgeInsets.all(16.0),
@@ -45,6 +57,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
             final cartProvider = context.read<CartProvider>();
             cartProvider.addItem(widget.item, _quantity);
             Navigator.pop(context);
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${widget.item.name} $_quantity개가 장바구니에 추가되었습니다.'),
@@ -71,13 +84,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            HeaderBar(
-              title: widget.item.name,
-              leftItem: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: const Icon(Icons.arrow_back_ios),
-              ),
-            ),
+            // ⭐ 기존 HeaderBar 제거됨
 
             Container(
               height: 300,

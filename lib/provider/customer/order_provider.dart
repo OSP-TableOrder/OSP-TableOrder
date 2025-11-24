@@ -47,8 +47,10 @@ class OrderStatusViewModel extends ChangeNotifier {
     if (_receiptId == null) return;
 
     try {
-      _order = await _service.addMenu(orderId: _receiptId!, menu: menu);
-      notifyListeners();
+      await _service.addMenu(orderId: _receiptId!, menu: menu);
+
+      // 서버 변경사항 반영
+      await refresh();
     } catch (_) {}
   }
 
@@ -56,8 +58,10 @@ class OrderStatusViewModel extends ChangeNotifier {
     if (_receiptId == null) return;
 
     try {
-      _order = await _service.cancelMenu(orderId: _receiptId!, menuId: menuId);
-      notifyListeners();
+      await _service.cancelMenu(orderId: _receiptId!, menuId: menuId);
+
+      // 최신 상태 갱신
+      await refresh();
     } catch (_) {}
   }
 }

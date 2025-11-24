@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:table_order/models/customer/menu.dart';
-import 'package:table_order/widgets/header_bar.dart';
+import 'package:table_order/widgets/header_bar.dart';      
 import 'package:table_order/widgets/menu_item_card.dart';
 import 'package:table_order/provider/customer/menu_provider.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
@@ -17,8 +17,6 @@ class MenuScreen extends StatelessWidget {
 
   const MenuScreen({super.key, required this.storeId});
 
-  // TODO: receiptId는 나중에 실제 데이터와 연동 시 수정 필요
-  // 현재는 임시로 하드코딩, 나중에 Provider나 상태 관리로 받아올 수 있음
   String get _receiptId => '438';
 
   void _navigateToOrderStatus(BuildContext context) {
@@ -37,12 +35,11 @@ class MenuScreen extends StatelessWidget {
       context,
       receiptId: _receiptId,
       onSubmit: (receiptId, message, items) async {
-        // TODO: table 정보는 나중에 실제 데이터와 연동 시 수정 필요
         final now = DateTime.now();
         final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
         
         final log = CallStaffLog(
-          table: '테이블', // TODO: 실제 테이블 정보로 교체 필요
+          table: '테이블',
           message: message,
           time: timeString,
         );
@@ -75,33 +72,46 @@ class MenuScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.white,
-        leading: TextButton(
-          onPressed: () => _navigateToOrderStatus(context),
-          child: Text(
-            '주문현황',
-            style: TextStyle(color: Colors.blue[700], fontSize: 16),
-          ),
-        ),
-        leadingWidth: 100,
-        title: Text(
-          '메뉴 주문하기',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: () => _showCallStaffDialog(context),
-            child: Text(
-              '직원호출',
-              style: TextStyle(color: Colors.blue[700], fontSize: 16),
+      body: Column(
+        children: [
+          HeaderBar(
+            title: '메뉴 주문하기',
+            leftItem: TextButton(
+              onPressed: () => _navigateToOrderStatus(context),
+              child: Text(
+                '주문현황',
+                style: TextStyle(color: Colors.blue[700], fontSize: 16),
+              ),
+            ),
+            rightItem: TextButton(
+              onPressed: () => _showCallStaffDialog(context),
+              child: Text(
+                '직원호출',
+                style: TextStyle(color: Colors.blue[700], fontSize: 16),
+              ),
             ),
           ),
+
+          Expanded(
+            child: (menuProvider.isLoading && displayList.isEmpty)
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: displayList.length,
+                    itemBuilder: (context, index) {
+                      final item = displayList[index];
+
+                      if (item is String) {
+                        return _buildCategoryHeader(item);
+                      } else if (item is Menu) {
+                        return MenuItemCard(item: item);
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+          )
         ],
       ),
+
       floatingActionButton: Consumer<CartProvider>(
         builder: (context, cartProvider, child) {
           final itemCount = cartProvider.itemCount;
@@ -110,27 +120,27 @@ class MenuScreen extends StatelessWidget {
             children: [
               FloatingActionButton(
                 onPressed: () => _navigateToCart(context),
-                backgroundColor: Color(0xFF6299FD),
+                backgroundColor: const Color(0xFF6299FD),
                 foregroundColor: Colors.white,
-                child: Icon(Icons.shopping_cart),
+                child: const Icon(Icons.shopping_cart),
               ),
               if (itemCount > 0)
                 Positioned(
                   right: -4,
                   top: -4,
                   child: Container(
-                    padding: EdgeInsets.all(4),
-                    decoration: BoxDecoration(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
                       color: Colors.red,
                       shape: BoxShape.circle,
                     ),
-                    constraints: BoxConstraints(
+                    constraints: const BoxConstraints(
                       minWidth: 20,
                       minHeight: 20,
                     ),
                     child: Text(
                       itemCount > 99 ? '99+' : '$itemCount',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -143,38 +153,15 @@ class MenuScreen extends StatelessWidget {
           );
         },
       ),
-
-      
-      body: Column(
-        children: [
-          Expanded(
-            child: (menuProvider.isLoading && displayList.isEmpty)
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  itemCount: displayList.length,
-                  itemBuilder: (context, index) {
-                    final item = displayList[index];
-
-                    if (item is String) {
-                      return _buildCategoryHeader(item);
-                    } else if (item is Menu) {
-                      return MenuItemCard(item: item);
-                    }
-                    return SizedBox.shrink();
-                  },
-                ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildCategoryHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 10.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 10.0), // ⭐ 여백 개선
       child: Text(
         title,
-        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
       ),
     );
   }

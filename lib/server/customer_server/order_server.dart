@@ -32,6 +32,9 @@ class OrderServerStub {
     ),
   ];
 
+  /// -----------------------------
+  /// 주문 조회
+  /// -----------------------------
   Future<Order?> findById(String orderId) async {
     await Future.delayed(const Duration(milliseconds: 400));
 
@@ -41,6 +44,9 @@ class OrderServerStub {
     return _orders[idx];
   }
 
+  /// -----------------------------
+  /// 메뉴 추가: 동일 메뉴면 수량 증가
+  /// -----------------------------
   Future<Order?> addMenu(String orderId, OrderMenu newMenu) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -49,14 +55,33 @@ class OrderServerStub {
 
     final order = _orders[orderIndex];
 
+    // 기존 메뉴 복사
     List<OrderMenu> updatedMenus = List<OrderMenu>.from(order.menus);
 
-    updatedMenus.add(newMenu);
+    // 1. 같은 메뉴가 기존에 있는지 확인
+    final existingIndex =
+        updatedMenus.indexWhere((m) => m.menu.id == newMenu.menu.id);
 
+    if (existingIndex != -1) {
+      // 2. 같은 메뉴가 있다 → quantity 증가
+      final existing = updatedMenus[existingIndex];
+
+      final updated = existing.copyWith(
+        quantity: existing.quantity + newMenu.quantity,
+      );
+
+      updatedMenus[existingIndex] = updated;
+    } else {
+      // 3. 같은 메뉴가 없다 → 새로 추가
+      updatedMenus.add(newMenu);
+    }
+
+    // 4. 총 금액 재계산 (취소된 메뉴 제외)
     final newTotalPrice = updatedMenus
         .where((m) => m.status != OrderMenuStatus.canceled)
         .fold<int>(0, (sum, m) => sum + (m.menu.price * m.quantity));
 
+    // 5. Order 업데이트
     final updatedOrder = order.copyWith(
       menus: updatedMenus,
       totalPrice: newTotalPrice,
@@ -67,6 +92,9 @@ class OrderServerStub {
     return updatedOrder;
   }
 
+  /// -----------------------------
+  /// 메뉴 취소: 상태를 canceled 로 변경
+  /// -----------------------------
   Future<Order?> cancelMenu(String orderId, int menuId) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -76,21 +104,25 @@ class OrderServerStub {
     final order = _orders[orderIndex];
 
     final menuIndex = order.menus.indexWhere((m) => m.id == menuId);
-    if (menuIndex == -1) return order; // 해당 메뉴 없으면 그냥 기존 주문 반환
+    if (menuIndex == -1) return order;
 
     final target = order.menus[menuIndex];
+
+    // 취소 불가능한 상태면 그대로 반환
     if (!target.isCancelable) {
-      return order; // 취소 불가 상태면 변경 없이 반환
+      return order;
     }
 
-    // 메뉴 상태 변경
-    final updatedMenus = List<OrderMenu>.from(order.menus);
-    updatedMenus[menuIndex] = target.copyWith(status: OrderMenuStatus.canceled);
+    // 상태를 canceled 로 변경
+    final updatedMenu = target.copyWith(status: OrderMenuStatus.canceled);
 
-    // 총 금액 재계산 (취소된 메뉴 제외)
+    final updatedMenus = List<OrderMenu>.from(order.menus);
+    updatedMenus[menuIndex] = updatedMenu;
+
+    // 총 금액 재계산
     final newTotalPrice = updatedMenus
         .where((m) => m.status != OrderMenuStatus.canceled)
-        .fold<int>(0, (sum, m) => sum + (m.menu.price * m.quantity));
+        .fold(0, (sum, m) => sum + (m.menu.price * m.quantity));
 
     final updatedOrder = order.copyWith(
       menus: updatedMenus,
@@ -98,7 +130,6 @@ class OrderServerStub {
     );
 
     _orders[orderIndex] = updatedOrder;
-
     return updatedOrder;
   }
 }
