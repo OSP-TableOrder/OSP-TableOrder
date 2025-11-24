@@ -11,11 +11,18 @@ class OrderStatusViewModel extends ChangeNotifier {
   bool get loading => _loading;
 
   String? _receiptId;
+  String? get receiptId => _receiptId;
 
   Order _order = Order(id: "0", storeId: 0, totalPrice: 0, menus: []);
   Order get order => _order;
 
   int get totalPrice => order.totalPrice;
+
+  /// receiptId 설정 (QR 코드로 받은 아이디를 저장)
+  void setReceiptId(String receiptId) {
+    _receiptId = receiptId;
+    notifyListeners();
+  }
 
   Future<void> loadInitial({required String receiptId}) async {
     _loading = true;

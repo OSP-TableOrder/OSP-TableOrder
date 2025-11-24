@@ -40,126 +40,135 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
       // ⭐ HeaderBar를 appBar로 이동
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
-        child: HeaderBar(
-          title: widget.item.name,
-          leftItem: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back_ios),
-          ),
-        ),
-      ),
-
-      bottomNavigationBar: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          onPressed: () {
-            final cartProvider = context.read<CartProvider>();
-            cartProvider.addItem(widget.item, _quantity);
-            Navigator.pop(context);
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${widget.item.name} $_quantity개가 장바구니에 추가되었습니다.'),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6299FD),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        child: SafeArea(
+          bottom: false,
+          child: HeaderBar(
+            title: widget.item.name,
+            leftItem: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: const Icon(Icons.arrow_back_ios),
             ),
           ),
-          child: Text(
-            '메뉴 담기 ($_quantity개)',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
         ),
       ),
 
-      body: SingleChildScrollView(
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ⭐ 기존 HeaderBar 제거됨
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ⭐ 기존 HeaderBar 제거됨
 
-            Container(
-              height: 300,
-              width: double.infinity,
-              color: Colors.grey[100],
-              child: widget.item.imageUrl != null
-                  ? Image.network(
-                      widget.item.imageUrl!,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
+                    Container(
+                      height: 300,
+                      width: double.infinity,
+                      color: Colors.grey[100],
+                      child: widget.item.imageUrl != null
+                          ? Image.network(
+                              widget.item.imageUrl!,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.restaurant, size: 100, color: Colors.grey[400]);
+                              },
+                            )
+                          : Icon(Icons.restaurant, size: 100, color: Colors.grey[400]),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.item.name,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(Icons.restaurant, size: 100, color: Colors.grey[400]);
-                      },
-                    )
-                  : Icon(Icons.restaurant, size: 100, color: Colors.grey[400]),
-            ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.item.description,
+                            style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '${widget.item.price}원',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.item.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                    Divider(height: 1, color: Colors.grey[200]),
+
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '주문 수량 $_quantity개',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          QuantityControl(
+                            onDecrement: _decrementQuantity,
+                            onIncrement: _incrementQuantity,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.item.description,
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${widget.item.price}원',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-
-            Divider(height: 1, color: Colors.grey[200]),
-
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '주문 수량 $_quantity개',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
+              padding: const EdgeInsets.all(12.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  final cartProvider = context.read<CartProvider>();
+                  cartProvider.addItem(widget.item, _quantity);
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${widget.item.name} $_quantity개가 장바구니에 추가되었습니다.'),
+                      duration: const Duration(seconds: 2),
                     ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6299FD),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  QuantityControl(
-                    onDecrement: _decrementQuantity,
-                    onIncrement: _incrementQuantity,
-                  ),
-                ],
+                ),
+                child: Text(
+                  '메뉴 담기 ($_quantity개)',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],

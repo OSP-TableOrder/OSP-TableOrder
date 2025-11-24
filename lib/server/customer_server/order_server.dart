@@ -45,7 +45,7 @@ class OrderServerStub {
   }
 
   /// -----------------------------
-  /// 메뉴 추가: 동일 메뉴면 수량 증가
+  /// 메뉴 추가: 새로운 OrderMenu 항목 추가 (수량 병합 안 함)
   /// -----------------------------
   Future<Order?> addMenu(String orderId, OrderMenu newMenu) async {
     await Future.delayed(const Duration(milliseconds: 300));
@@ -58,30 +58,15 @@ class OrderServerStub {
     // 기존 메뉴 복사
     List<OrderMenu> updatedMenus = List<OrderMenu>.from(order.menus);
 
-    // 1. 같은 메뉴가 기존에 있는지 확인
-    final existingIndex =
-        updatedMenus.indexWhere((m) => m.menu.id == newMenu.menu.id);
+    // 새로운 OrderMenu를 항상 추가 (동일 메뉴라도 별도 항목)
+    updatedMenus.add(newMenu);
 
-    if (existingIndex != -1) {
-      // 2. 같은 메뉴가 있다 → quantity 증가
-      final existing = updatedMenus[existingIndex];
-
-      final updated = existing.copyWith(
-        quantity: existing.quantity + newMenu.quantity,
-      );
-
-      updatedMenus[existingIndex] = updated;
-    } else {
-      // 3. 같은 메뉴가 없다 → 새로 추가
-      updatedMenus.add(newMenu);
-    }
-
-    // 4. 총 금액 재계산 (취소된 메뉴 제외)
+    // 총 금액 재계산 (취소된 메뉴 제외)
     final newTotalPrice = updatedMenus
         .where((m) => m.status != OrderMenuStatus.canceled)
         .fold<int>(0, (sum, m) => sum + (m.menu.price * m.quantity));
 
-    // 5. Order 업데이트
+    // Order 업데이트
     final updatedOrder = order.copyWith(
       menus: updatedMenus,
       totalPrice: newTotalPrice,

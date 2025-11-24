@@ -21,7 +21,7 @@ class _CartScreenState extends State<CartScreen> {
     final cartProvider = context.read<CartProvider>();
     final orderProvider = context.read<OrderStatusViewModel>();
 
-    final cartItems = cartProvider.items;
+    final cartItems = cartProvider.items.toList();
 
     // 모달 표시
     final result = await showConfirmModal(
@@ -64,17 +64,22 @@ class _CartScreenState extends State<CartScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: SafeArea(
+          bottom: false,
+          child: HeaderBar(
+            title: "장바구니",
+            leftItem: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: const Icon(Icons.arrow_back_ios),
+            ),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            HeaderBar(
-              title: "장바구니",
-              leftItem: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: const Icon(Icons.arrow_back_ios),
-              ),
-            ),
-
             Expanded(
               child: cartItems.isEmpty
                   ? const Center(
@@ -96,7 +101,6 @@ class _CartScreenState extends State<CartScreen> {
                           .toList(),
                     ),
             ),
-
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: ElevatedButton(

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:table_order/models/customer/menu.dart';
-import 'package:table_order/widgets/header_bar.dart';      
+import 'package:table_order/widgets/header_bar.dart';
 import 'package:table_order/widgets/menu_item_card.dart';
 import 'package:table_order/provider/customer/menu_provider.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
+import 'package:table_order/provider/customer/order_provider.dart';
 import 'package:table_order/screens/customer/order_status_screen.dart';
 import 'package:table_order/widgets/call_staff_modal/call_staff_modal.dart';
 import 'package:table_order/provider/admin/call_staff_provider.dart';
@@ -56,6 +57,7 @@ class MenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final menuProvider = context.watch<MenuProvider>();
+    final orderProvider = context.read<OrderStatusViewModel>();
 
     final shouldLoad = !menuProvider.isLoading && menuProvider.menus.isEmpty;
 
@@ -68,13 +70,20 @@ class MenuScreen extends StatelessWidget {
       });
     }
 
+    // receiptId를 한 번만 설정
+    if (orderProvider.receiptId != _receiptId) {
+      orderProvider.setReceiptId(_receiptId);
+    }
+
     final displayList = menuProvider.displayList;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: Column(
-        children: [
-          HeaderBar(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: SafeArea(
+          bottom: false,
+          child: HeaderBar(
             title: '메뉴 주문하기',
             leftItem: TextButton(
               onPressed: () => _navigateToOrderStatus(context),
@@ -91,25 +100,24 @@ class MenuScreen extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+      body: SafeArea(
+        child: (menuProvider.isLoading && displayList.isEmpty)
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                itemCount: displayList.length,
+                itemBuilder: (context, index) {
+                  final item = displayList[index];
 
-          Expanded(
-            child: (menuProvider.isLoading && displayList.isEmpty)
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: displayList.length,
-                    itemBuilder: (context, index) {
-                      final item = displayList[index];
-
-                      if (item is String) {
-                        return _buildCategoryHeader(item);
-                      } else if (item is Menu) {
-                        return MenuItemCard(item: item);
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-          )
-        ],
+                  if (item is String) {
+                    return _buildCategoryHeader(item);
+                  } else if (item is Menu) {
+                    return MenuItemCard(item: item);
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
       ),
 
       floatingActionButton: Consumer<CartProvider>(
