@@ -8,6 +8,8 @@ class StoreProvider with ChangeNotifier {
 
   List<Store> _stores = [];
 
+  List<Store> get stores => _stores;
+
   Future<void> loadStore() async {
     _stores = await _service.getStores();
     notifyListeners();

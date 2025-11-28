@@ -9,9 +9,10 @@ import 'package:table_order/provider/customer/cart_provider.dart';
 class MenuDetailScreen extends StatefulWidget {
   final Menu item;
 
-  const MenuDetailScreen({Key? key, required this.item}) : super(key: key);
+  const MenuDetailScreen({super.key, required this.item});
 
   @override
+  // ignore: library_private_types_in_public_api
   _MenuDetailScreenState createState() => _MenuDetailScreenState();
 }
 
@@ -61,7 +62,6 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ⭐ 기존 HeaderBar 제거됨
-
                     Container(
                       height: 300,
                       width: double.infinity,
@@ -70,22 +70,36 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                           ? Image.network(
                               widget.item.imageUrl!,
                               fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        value:
+                                            loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    );
+                                  },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.restaurant,
+                                  size: 100,
+                                  color: Colors.grey[400],
                                 );
                               },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.restaurant, size: 100, color: Colors.grey[400]);
-                              },
                             )
-                          : Icon(Icons.restaurant, size: 100, color: Colors.grey[400]),
+                          : Icon(
+                              Icons.restaurant,
+                              size: 100,
+                              color: Colors.grey[400],
+                            ),
                     ),
 
                     Padding(
@@ -103,7 +117,10 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                           const SizedBox(height: 8),
                           Text(
                             widget.item.description,
-                            style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[700],
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -152,7 +169,9 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('${widget.item.name} $_quantity개가 장바구니에 추가되었습니다.'),
+                      content: Text(
+                        '${widget.item.name} $_quantity개가 장바구니에 추가되었습니다.',
+                      ),
                       duration: const Duration(seconds: 2),
                     ),
                   );
@@ -167,7 +186,10 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                 ),
                 child: Text(
                   '메뉴 담기 ($_quantity개)',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),

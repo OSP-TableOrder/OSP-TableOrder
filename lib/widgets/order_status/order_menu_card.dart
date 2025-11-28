@@ -83,17 +83,16 @@ class OrderMenuCard extends StatelessWidget {
                   const SizedBox(height: 4),
 
                   // 메뉴 설명
-                  if (orderMenu.menu.description != null)
-                    Text(
-                      orderMenu.menu.description!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                        height: 1.3,
-                      ),
+                  Text(
+                    orderMenu.menu.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                      height: 1.3,
                     ),
+                  ),
                   const SizedBox(height: 4),
 
                   // 메뉴 단품 가격 및 주문 개수
