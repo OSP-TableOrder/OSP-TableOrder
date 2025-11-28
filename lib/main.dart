@@ -6,15 +6,18 @@ import 'package:app_links/app_links.dart';
 import 'package:table_order/provider/admin/call_staff_provider.dart';
 import 'package:table_order/provider/admin/category_provider.dart';
 import 'package:table_order/provider/admin/login_provider.dart';
-import 'package:table_order/provider/admin/order_log_provider.dart' as admin_order;
+import 'package:table_order/provider/admin/order_log_provider.dart'
+    as admin_order;
 import 'package:table_order/provider/admin/product_provider.dart';
+import 'package:table_order/provider/admin/store_info_provider.dart';
 import 'package:table_order/provider/admin/table_provider.dart';
 
 import 'package:table_order/routes/app_routes.dart';
 import 'package:table_order/provider/customer/store_provider.dart';
 import 'package:table_order/provider/customer/menu_provider.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
-import 'package:table_order/provider/customer/order_provider.dart' as customer_order;
+import 'package:table_order/provider/customer/order_provider.dart'
+    as customer_order;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -29,7 +32,10 @@ void main() {
         ChangeNotifierProvider(create: (_) => TableProvider()),
         ChangeNotifierProvider(create: (_) => LoginProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
-        ChangeNotifierProvider(create: (_) => customer_order.OrderStatusViewModel()),
+        ChangeNotifierProvider(create: (_) => StoreInfoProvider()),
+        ChangeNotifierProvider(
+          create: (_) => customer_order.OrderStatusViewModel(),
+        ),
         ChangeNotifierProvider(create: (_) => CallStaffProvider()),
         ChangeNotifierProvider(create: (_) => admin_order.OrderProvider()),
       ],
@@ -71,7 +77,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleLink(Uri uri) {
-    print("DeepLink : $uri");
+    // print("DeepLink : $uri");
 
     if (uri.host == 'menulist') {
       final storeId = uri.queryParameters['storeId'] ?? 'unknown';
