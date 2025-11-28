@@ -1,6 +1,6 @@
 enum OrderStatus { empty, ordered }
 
-class TableInfo {
+class TableOrderInfo {
   final String tableName;
   List<String> items;
   String? orderTime;
@@ -9,7 +9,7 @@ class TableInfo {
   bool hasCallRequest;
   OrderStatus orderStatus;
 
-  TableInfo({
+  TableOrderInfo({
     required this.tableName,
     this.items = const [],
     this.orderTime,

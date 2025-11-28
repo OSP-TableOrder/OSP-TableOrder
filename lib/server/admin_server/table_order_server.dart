@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:table_order/models/admin/table_info.dart';
+import 'package:table_order/models/admin/table_order_info.dart';
 
-class TableServerStub {
-  final List<TableInfo> fakeTableOrders = [
-    TableInfo(
+class TableOrderServerStub {
+  final List<TableOrderInfo> fakeTableOrders = [
+    TableOrderInfo(
       tableName: "1번",
       items: ["아메리카노", "카페라떼"],
       orderTime: "12:30",
@@ -12,7 +12,7 @@ class TableServerStub {
       hasCallRequest: false,
       orderStatus: OrderStatus.ordered,
     ),
-    TableInfo(
+    TableOrderInfo(
       tableName: "2번",
       items: [],
       orderTime: null,
@@ -21,7 +21,7 @@ class TableServerStub {
       hasCallRequest: false,
       orderStatus: OrderStatus.empty,
     ),
-    TableInfo(
+    TableOrderInfo(
       tableName: "3번",
       items: [],
       orderTime: null,
@@ -32,7 +32,7 @@ class TableServerStub {
     ),
   ];
 
-  Future<List<TableInfo>> fetchTableOrders() async {
+  Future<List<TableOrderInfo>> fetchTableOrders() async {
     await Future.delayed(const Duration(milliseconds: 400));
     return fakeTableOrders;
   }

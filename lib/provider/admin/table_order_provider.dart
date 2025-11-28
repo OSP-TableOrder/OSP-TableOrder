@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:table_order/models/admin/table_info.dart';
-import 'package:table_order/service/admin/table_service.dart';
+import 'package:table_order/models/admin/table_order_info.dart';
+import 'package:table_order/service/admin/table_order_service.dart';
 
-class TableProvider extends ChangeNotifier {
-  final TableService _service = TableService();
+class TableOrderProvider extends ChangeNotifier {
+  final TableOrderService _service = TableOrderService();
 
-  List<TableInfo> tables = [];
+  List<TableOrderInfo> tables = [];
 
   Future<void> loadTables() async {
     tables = await _service.getTableOrders();

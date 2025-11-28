@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:table_order/models/admin/table_info.dart';
+import 'package:table_order/models/admin/table_order_info.dart';
 
 class ReceiptModal extends StatelessWidget {
-  final TableInfo table;
+  final TableOrderInfo table;
 
   const ReceiptModal({super.key, required this.table});
 

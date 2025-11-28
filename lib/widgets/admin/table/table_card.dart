@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:table_order/models/admin/table_info.dart';
+import 'package:table_order/models/admin/table_order_info.dart';
 
 class TableCard extends StatefulWidget {
-  final TableInfo table;
+  final TableOrderInfo table;
   final VoidCallback onTap;
 
   const TableCard({super.key, required this.table, required this.onTap});
