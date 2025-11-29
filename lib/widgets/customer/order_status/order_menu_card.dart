@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:table_order/utils/won_formatter.dart';
 import 'package:table_order/models/customer/order_menu_status.dart';
 import 'package:table_order/models/customer/order_menu.dart';
-import 'package:table_order/widgets/order_status/order_status_tag.dart';
+import 'package:table_order/widgets/customer/order_status/order_status_tag.dart';
 
 class OrderMenuCard extends StatelessWidget {
   final OrderMenu orderMenu;

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:table_order/widgets/cart_item_card.dart';
-import 'package:table_order/widgets/header_bar.dart';
+import 'package:table_order/widgets/customer/cart_item_card.dart';
+import 'package:table_order/widgets/customer/header_bar.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
-import 'package:table_order/widgets/confirm_modal/confirm_modal.dart';
+import 'package:table_order/widgets/customer/confirm_modal/confirm_modal.dart';
 import 'package:table_order/models/customer/order_menu.dart';
 import 'package:table_order/models/customer/order_menu_status.dart';
 import 'package:table_order/provider/customer/order_provider.dart';
@@ -50,9 +50,9 @@ class _CartScreenState extends State<CartScreen> {
     );
 
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('주문이 완료되었습니다!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('주문이 완료되었습니다!')));
     }
   }
 

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:table_order/models/customer/menu.dart';
-import 'package:table_order/widgets/quantity_control.dart';
-import 'package:table_order/widgets/header_bar.dart';
+import 'package:table_order/widgets/customer/quantity_control.dart';
+import 'package:table_order/widgets/customer/header_bar.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
 
 class MenuDetailScreen extends StatefulWidget {
