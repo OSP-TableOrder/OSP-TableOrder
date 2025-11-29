@@ -10,7 +10,8 @@ import 'package:table_order/provider/admin/order_log_provider.dart'
     as admin_order;
 import 'package:table_order/provider/admin/product_provider.dart';
 import 'package:table_order/provider/admin/store_info_provider.dart';
-import 'package:table_order/provider/admin/table_provider.dart';
+import 'package:table_order/provider/admin/table_connect_provider.dart';
+import 'package:table_order/provider/admin/table_order_provider.dart';
 
 import 'package:table_order/routes/app_routes.dart';
 import 'package:table_order/provider/customer/store_provider.dart';
@@ -29,10 +30,12 @@ void main() {
         ChangeNotifierProvider(create: (_) => MenuProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
-        ChangeNotifierProvider(create: (_) => TableProvider()),
+        ChangeNotifierProvider(create: (_) => TableOrderProvider()),
         ChangeNotifierProvider(create: (_) => LoginProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => StoreInfoProvider()),
+        ChangeNotifierProvider(create: (_) => TableConnectProvider()),
+
         ChangeNotifierProvider(
           create: (_) => customer_order.OrderStatusViewModel(),
         ),

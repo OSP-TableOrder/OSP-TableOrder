@@ -39,9 +39,9 @@ class _TableCardItemState extends State<TableCardItem> {
         if (!mounted) return;
         setState(() {
           // 투명도 0.7 <-> 0.3 반복
-          _overlayColor = (_overlayColor == Colors.blue.withOpacity(0.7))
-              ? Colors.blue.withOpacity(0.3)
-              : Colors.blue.withOpacity(0.7);
+          _overlayColor = (_overlayColor == Colors.blue.withValues(alpha: 0.7))
+              ? Colors.blue.withValues(alpha: 0.3)
+              : Colors.blue.withValues(alpha: 0.7);
         });
       });
       return;
@@ -53,9 +53,10 @@ class _TableCardItemState extends State<TableCardItem> {
         if (!mounted) return;
         setState(() {
           // 투명도 0.7 <-> 0.3 반복
-          _overlayColor = (_overlayColor == Colors.orange.withOpacity(0.7))
-              ? Colors.orange.withOpacity(0.3)
-              : Colors.orange.withOpacity(0.7);
+          _overlayColor =
+              (_overlayColor == Colors.orange.withValues(alpha: 0.7))
+              ? Colors.orange.withValues(alpha: 0.3)
+              : Colors.orange.withValues(alpha: 0.7);
         });
       });
       return;
@@ -97,7 +98,7 @@ class _TableCardItemState extends State<TableCardItem> {
           border: Border.all(color: const Color(0xff1e88ff), width: 3),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

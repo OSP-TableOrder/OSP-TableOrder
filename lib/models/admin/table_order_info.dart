@@ -2,7 +2,7 @@ enum OrderStatus { empty, ordered }
 
 class TableOrderInfo {
   final String tableName;
-  List<String> items;
+  List<dynamic> items;
   String? orderTime;
   int totalPrice;
   bool hasNewOrder;

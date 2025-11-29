@@ -52,7 +52,7 @@ class TableOrderProvider extends ChangeNotifier {
 
       notifyListeners(); // 화면 갱신 요청
     } catch (e) {
-      print("테이블 목록 로드 실패: $e");
+      // print("테이블 목록 로드 실패: $e");
     }
   }
 

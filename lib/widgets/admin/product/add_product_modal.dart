@@ -38,7 +38,7 @@ class _ProductAddModalState extends State<ProductAddModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButtonFormField<String>(
-              value: selectedCategoryId,
+              initialValue: selectedCategoryId,
               items: categories
                   .map(
                     (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
