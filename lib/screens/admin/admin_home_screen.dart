@@ -4,6 +4,7 @@ import 'package:table_order/provider/admin/order_log_provider.dart';
 import 'package:table_order/widgets/admin/content_area/category_area.dart';
 import 'package:table_order/widgets/admin/content_area/product_area.dart';
 import 'package:table_order/widgets/admin/content_area/store_info_area.dart';
+import 'package:table_order/widgets/admin/content_area/table_connect_area.dart';
 import 'package:table_order/widgets/admin/content_area/table_management_area.dart';
 import 'package:table_order/widgets/admin/header/admin_header_bar.dart';
 import 'package:table_order/widgets/admin/side_menu_drawer/side_menu_drawer.dart';
@@ -34,7 +35,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       case "상품 수정":
         return const ProductArea();
       case "테이블 연동":
-      // return const TableConnectArea();
+        return const TableConnectArea();
       default:
         return const TableManagementArea(); // 기본 화면
     }
