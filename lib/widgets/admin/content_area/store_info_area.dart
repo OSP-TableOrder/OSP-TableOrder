@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_order/models/admin/store_info.dart';
 import 'package:table_order/provider/admin/store_info_provider.dart';
-import 'package:table_order/widgets/admin/store_info/edit_store_info_modal.dart';
+import 'package:table_order/widgets/admin/store_description/edit_store_info_modal.dart';
 
 class StoreInfoArea extends StatefulWidget {
   const StoreInfoArea({super.key});
