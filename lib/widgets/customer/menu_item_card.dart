@@ -6,7 +6,7 @@ import 'package:table_order/screens/customer/menu_detail_screen.dart';
 class MenuItemCard extends StatelessWidget {
   final Menu item;
 
-  const MenuItemCard({Key? key, required this.item}) : super(key: key);
+  const MenuItemCard({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -45,9 +45,10 @@ class MenuItemCard extends StatelessWidget {
                               if (loadingProgress == null) return child;
                               return Center(
                                 child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes != null
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
                                       ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
+                                            loadingProgress.expectedTotalBytes!
                                       : null,
                                 ),
                               );

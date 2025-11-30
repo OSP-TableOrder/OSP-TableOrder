@@ -31,6 +31,12 @@ class SideMenuDrawer extends StatelessWidget {
               ),
 
               MenuItem(
+                title: '가게정보 수정',
+                fontSize: 14,
+                onTap: () => onSelectMenu('가게정보 수정'),
+              ),
+
+              MenuItem(
                 title: '카테고리 수정',
                 fontSize: 14,
                 onTap: () => onSelectMenu('카테고리 수정'),
@@ -40,6 +46,12 @@ class SideMenuDrawer extends StatelessWidget {
                 title: '상품 수정',
                 fontSize: 14,
                 onTap: () => onSelectMenu('상품 수정'),
+              ),
+
+              MenuItem(
+                title: '테이블 연동',
+                fontSize: 14,
+                onTap: () => onSelectMenu('테이블 연동'),
               ),
             ],
           ),

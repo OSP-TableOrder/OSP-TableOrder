@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:table_order/models/customer/menu.dart';
-import 'package:table_order/widgets/header_bar.dart';
-import 'package:table_order/widgets/menu_item_card.dart';
+import 'package:table_order/widgets/customer/header_bar.dart';
+import 'package:table_order/widgets/customer/menu_item_card.dart';
 import 'package:table_order/provider/customer/menu_provider.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
 import 'package:table_order/provider/customer/order_provider.dart';
 import 'package:table_order/screens/customer/order_status_screen.dart';
-import 'package:table_order/widgets/call_staff_modal/call_staff_modal.dart';
+import 'package:table_order/widgets/customer/call_staff_modal/call_staff_modal.dart';
 import 'package:table_order/provider/admin/call_staff_provider.dart';
 import 'package:table_order/models/admin/call_staff_log.dart';
 import 'package:table_order/routes/app_routes.dart';
@@ -31,20 +31,21 @@ class MenuScreen extends StatelessWidget {
 
   Future<void> _showCallStaffDialog(BuildContext context) async {
     final callStaffProvider = context.read<CallStaffProvider>();
-    
+
     await showCallStaffDialog(
       context,
       receiptId: _receiptId,
       onSubmit: (receiptId, message, items) async {
         final now = DateTime.now();
-        final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-        
+        final timeString =
+            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
         final log = CallStaffLog(
           table: '테이블',
           message: message,
           time: timeString,
         );
-        
+
         await callStaffProvider.addLog(log);
       },
     );
@@ -63,6 +64,7 @@ class MenuScreen extends StatelessWidget {
 
     if (shouldLoad) {
       Future.microtask(() {
+        // ignore: use_build_context_synchronously
         final p = context.read<MenuProvider>();
         if (!p.isLoading && p.menus.isEmpty) {
           p.loadMenus(storeId);

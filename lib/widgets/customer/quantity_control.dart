@@ -5,10 +5,10 @@ class QuantityControl extends StatelessWidget {
   final VoidCallback onIncrement;
 
   const QuantityControl({
-    Key? key,
+    super.key,
     required this.onDecrement,
     required this.onIncrement,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +26,7 @@ class QuantityControl extends StatelessWidget {
             onPressed: onDecrement,
             padding: EdgeInsets.zero,
           ),
-          Container(
-            width: 1,
-            height: 20,
-            color: Colors.grey[400],
-          ),
+          Container(width: 1, height: 20, color: Colors.grey[400]),
           IconButton(
             icon: Icon(Icons.add, size: 20),
             onPressed: onIncrement,

@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -118,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
 
                           if (ok && mounted) {
+                            // ignore: use_build_context_synchronously
                             Navigator.pushNamed(context, "/admin/home");
                           }
                         }

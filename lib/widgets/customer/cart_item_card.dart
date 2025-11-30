@@ -10,10 +10,6 @@ class CartItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        // TODO: 메뉴 상세 페이지로 이동
-        // Navigator.pushNamed(context, '/menuDetail', arguments: item.menu.id);
-      },
       child: Card(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -77,9 +73,7 @@ class CartItemCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${item.quantity}개 - ${item.menu.price}원',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
