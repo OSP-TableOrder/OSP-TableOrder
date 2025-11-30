@@ -1,8 +1,8 @@
 import 'package:table_order/models/customer/menu.dart';
-import 'package:table_order/models/customer/order_menu_status.dart';
+import 'package:table_order/models/common/order_menu_status.dart';
 
 class OrderMenu {
-  final int id;
+  final String id;
   final OrderMenuStatus status;
   final int quantity;
   final int completedCount;

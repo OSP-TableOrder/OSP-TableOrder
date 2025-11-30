@@ -1,57 +1,86 @@
-import 'dart:async';
+import 'dart:developer' as developer;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_order/models/customer/menu.dart';
 
-class MenuServerStub {
-  final List<Menu> _menus = [
-    Menu(
-      id: 1,
-      storeId: 1,
-      category: "커피",
-      name: "아메리카노",
-      description: "kitCAFE 블렌드로 추출한 에스프레소를 부드럽게 즐길 수 있는 커피",
-      imageUrl:
-          "https://www.woorinews.co.kr/news/photo/202407/54820_58866_2943.png",
-      price: 5500,
-      isSoldOut: false,
-      isRecommended: false,
-    ),
-    Menu(
-      id: 2,
-      storeId: 1,
-      category: "커피",
-      name: "카페라떼",
-      description: "에스프레소와 부드러운 우유의 조화가 매력적인 커피",
-      imageUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_EkBajqRgceeStCsT_N3Z1z9uo7HZyzCocg&s",
-      price: 6500,
-      isSoldOut: true,
-      isRecommended: false,
-    ),
-    Menu(
-      id: 3,
-      storeId: 1,
-      category: "티",
-      name: "얼그레이 티",
-      description: "달콤쌉싸름한 자몽과 얼그레이 티가 만나 향기롭고 달콤한 음료",
-      imageUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThd8yCBZNOz2gkEwpY28Ae9mF7phVqTIFZiA&s",
-      price: 6000,
-      isSoldOut: false,
-      isRecommended: false,
-    ),
-  ];
+class MenuServer {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const String _collectionName = 'Menus';
 
-  Future<List<Menu>> fetchMenusByStoreId(int storeId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _menus.where((menu) => menu.storeId == storeId).toList();
+  /// Store ID로 메뉴 조회
+  Future<List<Menu>> fetchMenusByStoreId(String storeId) async {
+    try {
+      final CollectionReference collectionRef =
+          _firestore.collection(_collectionName);
+
+      return await collectionRef
+          .where('storeId', isEqualTo: storeId)
+          .get()
+          .then((QuerySnapshot snapshot) {
+        List<QueryDocumentSnapshot> list = snapshot.docs;
+        List<Menu> menus = [];
+
+        for (var doc in list) {
+          final menu = _parseMenu(
+            doc.id,
+            doc.data() as Map<String, dynamic>?,
+          );
+          if (menu != null) {
+            menus.add(menu);
+          }
+        }
+
+        return menus;
+      });
+    } catch (e) {
+      developer.log('Error fetching menus: $e', name: 'MenuServer');
+      return [];
+    }
   }
 
-  Future<Menu?> findById(int menuId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
+  /// 메뉴 ID로 조회
+  Future<Menu?> findById(String menuId) async {
+    try {
+      final CollectionReference collectionRef =
+          _firestore.collection(_collectionName);
+      final DocumentReference docRef = collectionRef.doc(menuId);
 
-    int idx = _menus.indexWhere((menu) => menu.id == menuId);
-    if (idx == -1) return null;
+      return await docRef.get().then((DocumentSnapshot snapshot) {
+        if (!snapshot.exists) return null;
 
-    return _menus[idx];
+        return _parseMenu(menuId, snapshot.data() as Map<String, dynamic>?);
+      });
+    } catch (e) {
+      developer.log('Error fetching menu: $e', name: 'MenuServer');
+      return null;
+    }
+  }
+
+  /// Menu 데이터 파싱
+  Menu? _parseMenu(String id, Map<String, dynamic>? data) {
+    if (data == null) return null;
+
+    try {
+      final storeId = data['storeId'];
+      final storeIdStr = storeId is int ? storeId.toString() : (storeId as String? ?? '');
+
+      final price = data['price'];
+      final priceInt = price is int ? price : (int.tryParse(price as String? ?? '0') ?? 0);
+
+      return Menu(
+        id: id,
+        storeId: storeIdStr,
+        categoryId: data['categoryId'] ?? data['category'], // 하위 호환성
+        name: data['name'] ?? '',
+        description: data['description'] ?? '',
+        imageUrl: data['imageUrl'],
+        price: priceInt,
+        isSoldOut: data['isSoldOut'] ?? false,
+        isRecommended: data['isRecommended'] ?? false,
+      );
+    } catch (e) {
+      developer.log('Error parsing menu: $e', name: 'MenuServer');
+      return null;
+    }
   }
 }

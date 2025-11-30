@@ -84,6 +84,8 @@ class MenuItemCard extends StatelessWidget {
                       SizedBox(height: 8),
                       Text(
                         item.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                       SizedBox(height: 12),
