@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,8 +7,9 @@ import 'package:table_order/widgets/customer/header_bar.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
 import 'package:table_order/widgets/customer/confirm_modal/confirm_modal.dart';
 import 'package:table_order/models/customer/order_menu.dart';
-import 'package:table_order/models/customer/order_menu_status.dart';
+import 'package:table_order/models/common/order_menu_status.dart';
 import 'package:table_order/provider/customer/order_provider.dart';
+import 'package:table_order/provider/app_state_provider.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -20,39 +22,103 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _showOrderConfirmDialog() async {
     final cartProvider = context.read<CartProvider>();
     final orderProvider = context.read<OrderStatusViewModel>();
+    final appState = context.read<AppStateProvider>();
 
     final cartItems = cartProvider.items.toList();
+    final storeId = appState.storeId;
+    final tableId = appState.tableId;
 
-    // 모달 표시
-    final result = await showConfirmModal(
+    // 총 수량 계산
+    final totalQuantity = cartItems.fold<int>(0, (sum, item) => sum + item.quantity);
+
+    if (storeId == null || storeId.isEmpty || tableId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('가게 정보가 없습니다. 다시 시도해주세요.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (totalQuantity == 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('주문할 메뉴가 없습니다.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    bool orderPlaced = false;
+
+    await showConfirmModal(
       context,
       title: '주문을 완료하시겠어요?',
-      description: '장바구니에 담긴 메뉴로 주문이 생성됩니다.',
+      description: '장바구니에 담긴 메뉴를 주문에 추가합니다.',
       cancelText: '취소',
       actionText: '주문하기',
       onActionAsync: () async {
-        // 1) CartItem → OrderMenu 변환 후 서버에 추가
-        for (final cartItem in cartItems) {
-          final orderMenu = OrderMenu(
-            id: DateTime.now().millisecondsSinceEpoch, // 임시 id
-            status: OrderMenuStatus.ordered,
-            quantity: cartItem.quantity,
-            completedCount: 0,
-            menu: cartItem.menu,
-          );
+        try {
+          developer.log('Confirming order for tableId=$tableId (items=${cartItems.length})',
+              name: 'CartScreen');
 
-          await orderProvider.addMenu(orderMenu);
+          // 1) 기존 영수증이 있으면 사용, 없으면 생성
+          if (orderProvider.receiptId == null) {
+            await orderProvider.initializeOrderForTable(
+              storeId: storeId,
+              tableId: tableId,
+            );
+          }
+
+          if (orderProvider.receiptId == null) {
+            throw Exception('주문 생성에 실패했습니다.');
+          }
+
+          // 2) CartItem → OrderMenu 변환 후 주문에 추가
+          for (final cartItem in cartItems) {
+            final orderMenu = OrderMenu(
+              id: '', // OrderServer에서 Firestore 자동 생성 ID로 설정됨
+              status: OrderMenuStatus.ordered,
+              quantity: cartItem.quantity,
+              completedCount: 0,
+              menu: cartItem.menu,
+            );
+
+            developer.log(
+              'Adding menu to order ${orderProvider.receiptId}: ${cartItem.menu.name} x ${cartItem.quantity}',
+              name: 'CartScreen',
+            );
+            await orderProvider.addMenu(orderMenu);
+          }
+
+          // 3) 장바구니 비우기 및 성공 플래그 설정
+          cartProvider.clear();
+          orderPlaced = true;
+          developer.log('Cart cleared after successful order', name: 'CartScreen');
+        } catch (e) {
+          developer.log('Failed to submit order: $e', name: 'CartScreen');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('주문 처리 중 오류가 발생했습니다. 다시 시도해주세요.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
-
-        // 2) 장바구니 비우기
-        cartProvider.clear();
       },
     );
 
-    if (result == true && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('주문이 완료되었습니다!')));
+    if (orderPlaced && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('주문이 추가되었습니다!')),
+      );
     }
   }
 
@@ -64,17 +130,11 @@ class _CartScreenState extends State<CartScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: SafeArea(
-          bottom: false,
-          child: HeaderBar(
-            title: "장바구니",
-            leftItem: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Icon(Icons.arrow_back_ios),
-            ),
-          ),
+      appBar: HeaderBar(
+        title: "장바구니",
+        leftItem: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: const Icon(Icons.arrow_back_ios),
         ),
       ),
       body: SafeArea(

@@ -1,23 +1,66 @@
-import 'dart:async';
+import 'dart:developer' as developer;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_order/models/admin/store_info.dart';
 
-class StoreInfoServerStub {
-  StoreInfoModel _storeInfo = const StoreInfoModel(
-    storeName: "맛있는 떡볶이 구미점",
-    notice: "재료 소진 시 조기 마감될 수 있습니다.",
-  );
+class StoreInfoServer {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const String _collectionName = 'Stores';
 
-  // 가게 정보 조회
-  Future<StoreInfoModel> fetchStoreInfo() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _storeInfo;
+  /// 특정 가게의 정보 조회
+  Future<StoreInfoModel> fetchStoreInfo(String storeId) async {
+    try {
+      final DocumentReference docRef = _firestore
+          .collection(_collectionName)
+          .doc(storeId);
+
+      return await docRef.get().then((DocumentSnapshot snapshot) {
+        if (!snapshot.exists) {
+          return StoreInfoModel.initial();
+        }
+
+        final data = snapshot.data() as Map<String, dynamic>?;
+        return _parseStoreInfo(data);
+      });
+    } catch (e) {
+      developer.log('Error fetching store info: $e', name: 'StoreInfoServer');
+      return StoreInfoModel.initial();
+    }
   }
 
-  // 가게 정보 수정
-  Future<void> updateStoreInfo(String name, String notice) async {
-    await Future.delayed(const Duration(milliseconds: 200));
+  /// 가게 정보 수정
+  Future<void> updateStoreInfo({
+    required String storeId,
+    required String name,
+    required String notice,
+  }) async {
+    try {
+      final DocumentReference docRef = _firestore
+          .collection(_collectionName)
+          .doc(storeId);
 
-    _storeInfo = _storeInfo.copyWith(storeName: name, notice: notice);
+      await docRef.update({
+        'name': name, // 'name' 필드로 수정 (store 생성 시와 동일한 필드명)
+        'notice': notice,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      developer.log('Error updating store info: $e', name: 'StoreInfoServer');
+    }
+  }
+
+  /// StoreInfoModel 데이터 파싱
+  StoreInfoModel _parseStoreInfo(Map<String, dynamic>? data) {
+    if (data == null) return StoreInfoModel.initial();
+
+    try {
+      return StoreInfoModel(
+        storeName: data['name'] ?? '', // 'name' 필드 사용 (store 생성 시 사용되는 필드)
+        notice: data['notice'] ?? '',
+      );
+    } catch (e) {
+      developer.log('Error parsing store info: $e', name: 'StoreInfoServer');
+      return StoreInfoModel.initial();
+    }
   }
 }

@@ -1,27 +1,52 @@
 // lib/widgets/admin/table/menu_selection_modal.dart
 
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:table_order/provider/app_state_provider.dart';
+import 'package:table_order/service/admin/product_service.dart';
 
 class AddOrderModal extends StatefulWidget {
-  const AddOrderModal({super.key});
+  final String? storeId;
+
+  const AddOrderModal({
+    super.key,
+    this.storeId,
+  });
 
   @override
   State<AddOrderModal> createState() => _AddOrderModalState();
 }
 
 class _AddOrderModalState extends State<AddOrderModal> {
-  // 전체 메뉴 데이터
-  final List<Map<String, dynamic>> availableMenus = [
-    {"name": "아메리카노", "price": 3000},
-    {"name": "카페라떼", "price": 3500},
-    {"name": "카페모카", "price": 4000},
-    {"name": "딸기라떼", "price": 6000},
-    {"name": "레몬에이드", "price": 6000},
-    {"name": "블루베리스무디", "price": 7000},
-  ];
+  final ProductService _productService = ProductService();
+  late Future<List<Map<String, dynamic>>> _menusFuture;
+  List<Map<String, dynamic>> _menus = [];
 
   // 선택된 수량을 저장하는 맵 (key: 메뉴이름, value: 수량)
   final Map<String, int> _selectedCounts = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // storeId를 가져와서 메뉴 목록 로드
+    String? storeId = widget.storeId;
+
+    // 매개변수로 받은 storeId가 없으면 AppStateProvider에서 가져옴
+    if (storeId == null) {
+      final appState = context.read<AppStateProvider>();
+      storeId = appState.storeId;
+    }
+
+    developer.log('AddOrderModal initState - storeId: $storeId', name: 'AddOrderModal');
+
+    if (storeId != null) {
+      _menusFuture = _productService.getProductsByStore(storeId);
+    } else {
+      developer.log('AddOrderModal initState - storeId is null!', name: 'AddOrderModal');
+      _menusFuture = Future.value([]);
+    }
+  }
 
   void _increaseCount(String name) {
     setState(() {
@@ -75,15 +100,39 @@ class _AddOrderModalState extends State<AddOrderModal> {
 
           // 메뉴 리스트 (스크롤 가능)
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: availableMenus.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final menu = availableMenus[index];
-                final name = menu['name'];
-                final price = menu['price'];
-                final count = _selectedCounts[name] ?? 0;
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _menusFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  developer.log('FutureBuilder error: ${snapshot.error}', name: 'AddOrderModal');
+                  return Center(
+                    child: Text('메뉴 로드 실패: ${snapshot.error}'),
+                  );
+                }
+
+                _menus = snapshot.data ?? [];
+                developer.log('FutureBuilder completed with ${_menus.length} menus', name: 'AddOrderModal');
+                if (_menus.isEmpty) {
+                  return const Center(
+                    child: Text('사용 가능한 메뉴가 없습니다.'),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _menus.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final menu = _menus[index];
+                    final name = menu['name'];
+                    final price = menu['price'];
+                    final count = _selectedCounts[name] ?? 0;
 
                 return Container(
                   padding: const EdgeInsets.all(12),
@@ -156,6 +205,8 @@ class _AddOrderModalState extends State<AddOrderModal> {
                     ],
                   ),
                 );
+                  },
+                );
               },
             ),
           ),
@@ -171,18 +222,23 @@ class _AddOrderModalState extends State<AddOrderModal> {
                     ? () {
                         // 선택된 메뉴만 필터링해서 리턴
                         List<Map<String, dynamic>> result = [];
-                        _selectedCounts.forEach((name, count) {
+                        final selectedMenus = _menus
+                            .where((m) {
+                              final name = m['name'] ?? '';
+                              return (_selectedCounts[name] ?? 0) > 0;
+                            })
+                            .toList();
+
+                        for (final menu in selectedMenus) {
+                          final name = menu['name'];
+                          final count = _selectedCounts[name] ?? 0;
                           if (count > 0) {
-                            final menuInfo = availableMenus.firstWhere(
-                              (element) => element['name'] == name,
-                            );
                             result.add({
-                              "name": name,
-                              "price": menuInfo['price'],
+                              "menu": menu,  // 전체 메뉴 객체 저장
                               "quantity": count,
                             });
                           }
-                        });
+                        }
                         Navigator.pop(context, result); // 결과 전달하며 닫기
                       }
                     : null,

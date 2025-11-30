@@ -35,7 +35,7 @@ class MenuProvider with ChangeNotifier {
   }
 
   // 특정 가게의 메뉴 목록을 불러오기
-  Future<void> loadMenus(int storeId) async {
+  Future<void> loadMenus(String storeId) async {
     _isLoading = true;
     notifyListeners();
 

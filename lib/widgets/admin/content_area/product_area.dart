@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_order/provider/admin/product_provider.dart';
 import 'package:table_order/provider/admin/category_provider.dart';
+import 'package:table_order/provider/admin/login_provider.dart';
 import 'package:table_order/widgets/admin/product/add_product_modal.dart';
 import 'package:table_order/widgets/admin/product/edit_product_modal.dart';
 import 'package:table_order/widgets/admin/product/product_list_item.dart';
@@ -16,14 +17,44 @@ class ProductArea extends StatefulWidget {
 }
 
 class _ProductAreaState extends State<ProductArea> {
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    context.read<ProductProvider>().loadProducts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+
+    try {
+      final loginProvider = context.read<LoginProvider>();
+      final storeId = loginProvider.storeId;
+
+      if (storeId != null) {
+        await context.read<CategoryProvider>().loadCategories(storeId);
+      }
+
+      if (!mounted) return;
+      await context.read<ProductProvider>().loadProducts();
+    } catch (e) {
+      debugPrint('Error loading products: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final productProvider = context.watch<ProductProvider>();
     final categoryProvider = context.watch<CategoryProvider>();
 

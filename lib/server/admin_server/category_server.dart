@@ -1,35 +1,123 @@
-import 'dart:async';
+import 'dart:developer' as developer;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_order/models/admin/category.dart';
 
-class CategoryServerStub {
-  final List<Category> _categories = [
-    Category(id: "c1", name: "COFFEE", active: true),
-    Category(id: "c2", name: "TEA", active: false),
-    Category(id: "c3", name: "BREAD", active: false),
-  ];
+class CategoryServer {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const String _collectionName = 'Categories';
 
-  Future<List<Category>> fetchCategories() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return List<Category>.from(_categories);
-  }
+  /// 특정 가게의 모든 카테고리 조회
+  Future<List<Category>> fetchCategories(String storeId) async {
+    try {
+      final CollectionReference collectionRef =
+          _firestore.collection(_collectionName);
 
-  Future<void> addCategory(String name) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final newId = "c${_categories.length + 1}";
-    _categories.add(Category(id: newId, name: name, active: true));
-  }
+      return await collectionRef
+          .where('storeId', isEqualTo: storeId)
+          .get()
+          .then((QuerySnapshot snapshot) {
+        List<QueryDocumentSnapshot> list = snapshot.docs;
+        List<Category> categories = [];
 
-  Future<void> updateCategory(String id, String newName, bool active) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final index = _categories.indexWhere((c) => c.id == id);
-    if (index != -1) {
-      _categories[index].name = newName;
-      _categories[index].active = active;
+        for (var doc in list) {
+          final category = _parseCategory(doc.id, doc.data() as Map<String, dynamic>?);
+          if (category != null) {
+            categories.add(category);
+          }
+        }
+
+        // 메모리에서 order 필드로 정렬
+        categories.sort((a, b) => a.order.compareTo(b.order));
+
+        return categories;
+      });
+    } catch (e) {
+      developer.log('Error fetching categories: $e', name: 'CategoryServer');
+      return [];
     }
   }
 
+  /// 카테고리 추가
+  Future<void> addCategory({
+    required String storeId,
+    required String name,
+    bool active = true,
+    int order = 0,
+  }) async {
+    try {
+      final CollectionReference collectionRef =
+          _firestore.collection(_collectionName);
+
+      // Firestore 자동 생성 ID 사용
+      final newDocRef = collectionRef.doc();
+
+      await newDocRef.set({
+        'storeId': storeId,
+        'name': name,
+        'active': active,
+        'order': order,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      developer.log('Error adding category: $e', name: 'CategoryServer');
+    }
+  }
+
+  /// 카테고리 수정
+  Future<void> updateCategory({
+    required String id,
+    required String name,
+    required bool active,
+    required int order,
+  }) async {
+    try {
+      final CollectionReference collectionRef =
+          _firestore.collection(_collectionName);
+      final DocumentReference docRef = collectionRef.doc(id);
+
+      await docRef.update({
+        'name': name,
+        'active': active,
+        'order': order,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      developer.log('Error updating category: $e', name: 'CategoryServer');
+    }
+  }
+
+  /// 카테고리 삭제
   Future<void> deleteCategory(String id) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _categories.removeWhere((c) => c.id == id);
+    try {
+      final CollectionReference collectionRef =
+          _firestore.collection(_collectionName);
+      final DocumentReference docRef = collectionRef.doc(id);
+
+      await docRef.delete();
+    } catch (e) {
+      developer.log('Error deleting category: $e', name: 'CategoryServer');
+    }
+  }
+
+  /// Category 데이터 파싱
+  Category? _parseCategory(String id, Map<String, dynamic>? data) {
+    if (data == null) return null;
+
+    try {
+      final storeId = data['storeId'];
+      final storeIdStr = storeId is int ? storeId.toString() : (storeId as String? ?? '');
+
+      return Category(
+        id: id,
+        storeId: storeIdStr,
+        name: data['name'] ?? '',
+        active: data['active'] ?? true,
+        order: data['order'] ?? 0,
+      );
+    } catch (e) {
+      developer.log('Error parsing category: $e', name: 'CategoryServer');
+      return null;
+    }
   }
 }

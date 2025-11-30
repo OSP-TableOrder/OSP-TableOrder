@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:table_order/provider/admin/login_provider.dart';
 import 'package:table_order/provider/admin/table_connect_provider.dart';
 import 'package:table_order/provider/admin/table_order_provider.dart';
 import 'package:table_order/widgets/admin/qr/qr_dialog.dart';
@@ -18,7 +19,10 @@ class _TableConnectAreaState extends State<TableConnectArea> {
     super.initState();
     // 화면 진입 시 테이블 목록 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TableConnectProvider>().loadTables();
+      final storeId = context.read<LoginProvider>().storeId;
+      if (storeId != null) {
+        context.read<TableConnectProvider>().loadTables(storeId.toString());
+      }
     });
   }
 
@@ -43,16 +47,29 @@ class _TableConnectAreaState extends State<TableConnectArea> {
               ),
               ElevatedButton(
                 onPressed: () {
+                  final storeId = context.read<LoginProvider>().storeId;
+                  if (storeId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Store ID를 찾을 수 없습니다.')),
+                    );
+                    return;
+                  }
+
                   showDialog(
                     context: context,
                     builder: (_) => AddTableModal(
                       onSubmit: (name) async {
                         // DB에 테이블 추가
-                        await provider.addTable(name);
+                        await provider.addTable(
+                          storeId: storeId.toString(),
+                          name: name,
+                        );
 
                         // 홈 화면 목록 갱신
                         if (context.mounted) {
-                          await context.read<TableOrderProvider>().loadTables();
+                          await context
+                              .read<TableOrderProvider>()
+                              .loadTables(storeId.toString());
                         }
                       },
                     ),
@@ -166,14 +183,21 @@ class _TableConnectAreaState extends State<TableConnectArea> {
                                   color: Colors.transparent,
                                   child: IconButton(
                                     onPressed: () async {
+                                      final storeId =
+                                          context.read<LoginProvider>().storeId;
+                                      if (storeId == null) return;
+
                                       // DB에서 삭제
-                                      await provider.deleteTable(table.id);
+                                      await provider.deleteTable(
+                                        id: table.id,
+                                        storeId: storeId.toString(),
+                                      );
 
                                       // 홈 화면 목록 갱신
                                       if (context.mounted) {
                                         await context
                                             .read<TableOrderProvider>()
-                                            .loadTables();
+                                            .loadTables(storeId.toString());
                                       }
                                     },
                                     icon: const Icon(

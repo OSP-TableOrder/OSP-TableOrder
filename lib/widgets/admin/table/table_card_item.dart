@@ -75,15 +75,21 @@ class _TableCardItemState extends State<TableCardItem> {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasOrder = widget.table.items.isNotEmpty;
+    // 테이블의 모든 주문에서 메뉴 항목들 수집
+    final allItems = <dynamic>[];
+    for (final order in widget.table.orders) {
+      allItems.addAll(order.items);
+    }
+
+    final bool hasOrder = allItems.isNotEmpty;
     final bool isNewOrder = widget.table.hasNewOrder;
     final bool isCallRequest = widget.table.hasCallRequest;
+    final bool isHighlighted = widget.table.orderStatus == OrderStatus.ordered;
 
     // 카드의 기본 배경색 (깜빡이지 않음)
-    Color cardBgColor = Colors.white;
-    if (widget.table.orderStatus == OrderStatus.ordered) {
-      cardBgColor = const Color(0xff1e88ff);
-    }
+    final Color cardBgColor = isHighlighted ? const Color(0xff1e88ff) : Colors.white;
+    final Color textColor = isHighlighted ? Colors.white : Colors.black87;
+    final Color mutedTextColor = isHighlighted ? Colors.white70 : Colors.black54;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -128,7 +134,7 @@ class _TableCardItemState extends State<TableCardItem> {
                   // 메뉴 목록
                   Expanded(
                     child: hasOrder
-                        ? _buildOrderContent()
+                        ? _buildOrderContent(allItems, textColor, mutedTextColor)
                         : const SizedBox.shrink(),
                   ),
                 ],
@@ -189,8 +195,11 @@ class _TableCardItemState extends State<TableCardItem> {
   }
 
   // 메뉴 리스트 내용물
-  Widget _buildOrderContent() {
-    final items = widget.table.items;
+  Widget _buildOrderContent(
+    List<dynamic> items,
+    Color textColor,
+    Color mutedTextColor,
+  ) {
     final int displayCount = items.length > 3 ? 3 : items.length;
 
     return Column(
@@ -211,27 +220,27 @@ class _TableCardItemState extends State<TableCardItem> {
                         child: Text(
                           _getItemName(items[i]),
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: Colors.white,
+                            color: textColor,
                           ),
                         ),
                       ),
                       // 수량
                       Text(
                         "x${_getItemQty(items[i])}",
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: Colors.white,
+                          color: textColor,
                         ),
                       ),
                     ],
                   ),
                 ),
               if (items.length > 3)
-                const Text(
+                Text(
                   "...",
-                  style: TextStyle(fontSize: 13, color: Colors.white70),
+                  style: TextStyle(fontSize: 13, color: mutedTextColor),
                 ),
             ],
           ),
@@ -242,10 +251,10 @@ class _TableCardItemState extends State<TableCardItem> {
           alignment: Alignment.bottomRight,
           child: Text(
             "${widget.table.totalPrice}원",
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: textColor,
             ),
           ),
         ),

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:table_order/utils/won_formatter.dart';
 import 'package:table_order/models/customer/order_menu.dart';
 import 'package:table_order/provider/customer/order_provider.dart';
-import 'package:table_order/widgets/customer/order_status/order_menu_card.dart';
+import 'package:table_order/widgets/order_status/order_menu_card.dart';
 import 'package:table_order/widgets/customer/confirm_modal/confirm_modal.dart';
 import 'package:table_order/widgets/customer/header_bar.dart';
 
@@ -24,14 +24,16 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final snackBar = ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('주문 내역을 불러오고 있습니다...')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('주문 내역을 불러오고 있습니다...')),
+      );
 
       final viewModel = context.read<OrderStatusViewModel>();
       await viewModel.loadInitial(receiptId: widget.receiptId);
       if (!mounted) return;
-      snackBar.close();
+
+      // 로딩 완료 후 SnackBar 제거
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       unawaited(_pollLoop(viewModel));
     });
@@ -70,17 +72,11 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: SafeArea(
-          bottom: false,
-          child: HeaderBar(
-            title: "주문현황",
-            leftItem: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Icon(Icons.arrow_back_ios),
-            ),
-          ),
+      appBar: HeaderBar(
+        title: "주문현황",
+        leftItem: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: const Icon(Icons.arrow_back_ios),
         ),
       ),
       body: SafeArea(
@@ -129,32 +125,25 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                                   itemBuilder: (context, idx) {
                                     final OrderMenu menu = menus[idx];
                                     return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 12,
-                                      ),
+                                      padding: const EdgeInsets.only(bottom: 12),
                                       child: OrderMenuCard(
                                         orderMenu: menu,
                                         onTapDelete: menu.isCancelable
                                             ? () async {
-                                                final ok =
-                                                    await showConfirmModal(
-                                                      context,
-                                                      title: '주문 메뉴 취소',
-                                                      description:
-                                                          '해당 메뉴를 취소하시겠습니까?',
-                                                      cancelText: '취소',
-                                                      actionText: '확인',
-                                                      onActionAsync: () async {
-                                                        await viewModel
-                                                            .cancelMenu(
-                                                              menu.id,
-                                                            );
-                                                      },
+                                                final ok = await showConfirmModal(
+                                                  context,
+                                                  title: '주문 메뉴 취소',
+                                                  description: '해당 메뉴를 취소하시겠습니까?',
+                                                  cancelText: '취소',
+                                                  actionText: '확인',
+                                                  onActionAsync: () async {
+                                                    await viewModel.cancelMenu(
+                                                      menu.id,
                                                     );
+                                                  },
+                                                );
                                                 if (ok == true) {
-                                                  _toast(
-                                                    '주문 메뉴가 성공적으로 취소되었습니다.',
-                                                  );
+                                                  _toast('주문 메뉴가 성공적으로 취소되었습니다.');
                                                 }
                                               }
                                             : null,
@@ -178,7 +167,10 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                 children: [
                   const Text(
                     '총 가격',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   Row(
                     children: [

@@ -12,8 +12,7 @@ class MenuDetailScreen extends StatefulWidget {
   const MenuDetailScreen({super.key, required this.item});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _MenuDetailScreenState createState() => _MenuDetailScreenState();
+  State<MenuDetailScreen> createState() => _MenuDetailScreenState();
 }
 
 class _MenuDetailScreenState extends State<MenuDetailScreen> {
@@ -38,18 +37,11 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // ⭐ HeaderBar를 appBar로 이동
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: SafeArea(
-          bottom: false,
-          child: HeaderBar(
-            title: widget.item.name,
-            leftItem: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Icon(Icons.arrow_back_ios),
-            ),
-          ),
+      appBar: HeaderBar(
+        title: widget.item.name,
+        leftItem: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: const Icon(Icons.arrow_back_ios),
         ),
       ),
 

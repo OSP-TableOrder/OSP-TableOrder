@@ -1,32 +1,23 @@
 class Store {
-  final int id;
+  final String id; // Firestore 자동 생성 ID
   final String name;
   final bool isOpened;
-  final String headImageUrl;
-  final String description;
-  final double latitude;
-  final double longitude;
+  final String notice;
 
   Store({
     required this.id,
     required this.name,
     required this.isOpened,
-    required this.headImageUrl,
-    required this.description,
-    required this.latitude,
-    required this.longitude,
+    required this.notice,
   });
 
   // 서버 JSON 응답을 객체로 변환하는 메서드
   factory Store.fromJson(Map<String, dynamic> json) {
     return Store(
-      id: json['storeId'] as int,
-      name: json['storeName'] as String,
+      id: json['id'] as String,
+      name: json['name'] as String,
       isOpened: json['isOpened'] as bool,
-      headImageUrl: json['headImageUrl'] as String,
-      description: json['description'] as String,
-      latitude: json['latitude'] ?? 37.5665, // 기본값
-      longitude: json['longitude'] ?? 126.9780,
+      notice: json['notice'] as String,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_order/models/admin/store_info.dart';
+import 'package:table_order/provider/admin/login_provider.dart';
 import 'package:table_order/provider/admin/store_info_provider.dart';
 import 'package:table_order/widgets/admin/store_description/edit_store_info_modal.dart';
 
@@ -16,7 +17,10 @@ class _StoreInfoAreaState extends State<StoreInfoArea> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<StoreInfoProvider>().loadStoreInfo();
+      final storeId = context.read<LoginProvider>().storeId;
+      if (storeId != null) {
+        context.read<StoreInfoProvider>().loadStoreInfo(storeId.toString());
+      }
     });
   }
 
@@ -24,6 +28,7 @@ class _StoreInfoAreaState extends State<StoreInfoArea> {
   Widget build(BuildContext context) {
     final provider = context.watch<StoreInfoProvider>();
     final storeInfo = provider.storeInfo;
+    final storeId = context.read<LoginProvider>().storeId;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -39,18 +44,23 @@ class _StoreInfoAreaState extends State<StoreInfoArea> {
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               ElevatedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => EditStoreInfoModal(
-                      storeInfo: storeInfo, // 현재 모델 전달
-                      onSubmit: (StoreInfoModel newInfo) {
-                        // 수정된 모델을 Provider로 전달
-                        provider.updateStoreInfo(newInfo);
+                onPressed: storeId == null
+                    ? null
+                    : () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => EditStoreInfoModal(
+                            storeInfo: storeInfo, // 현재 모델 전달
+                            onSubmit: (StoreInfoModel newInfo) {
+                              // 수정된 모델을 Provider로 전달
+                              provider.updateStoreInfo(
+                                storeId: storeId.toString(),
+                                newInfo: newInfo,
+                              );
+                            },
+                          ),
+                        );
                       },
-                    ),
-                  );
-                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xff2d7ff9),
                   foregroundColor: Colors.white,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class HeaderBar extends StatelessWidget {
+class HeaderBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
 
   /// 왼쪽/오른쪽에 들어갈 아이템 (Text, Icon, Row 모두 가능)
@@ -15,36 +15,42 @@ class HeaderBar extends StatelessWidget {
   });
 
   @override
+  Size get preferredSize => const Size.fromHeight(56.0);
+
+  @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Colors.black12),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.black12)),
       ),
-      child: Row(
-        children: [
-          // 왼쪽
-          leftItem ?? const SizedBox(width: 40),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              // 왼쪽
+              leftItem ?? const SizedBox(width: 40),
 
-          // 가운데(항상 중앙 유지)
-          Expanded(
-            child: Center(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              // 가운데(항상 중앙 유지)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          // 오른쪽
-          rightItem ?? const SizedBox(width: 40),
-        ],
+              // 오른쪽
+              rightItem ?? const SizedBox(width: 40),
+            ],
+          ),
+        ),
       ),
     );
   }

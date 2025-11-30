@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:table_order/provider/admin/login_provider.dart';
 import 'package:table_order/provider/admin/table_order_provider.dart';
 import 'package:table_order/widgets/admin/order/receipt_modal.dart';
 import 'package:table_order/widgets/admin/table/table_card_item.dart';
@@ -12,15 +13,40 @@ class TableManagementArea extends StatefulWidget {
 }
 
 class _TableManagementAreaState extends State<TableManagementArea> {
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    context.read<TableOrderProvider>().loadTables();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final storeId = context.read<LoginProvider>().storeId;
+      if (storeId != null) {
+        await context
+            .read<TableOrderProvider>()
+            .loadTables(storeId.toString());
+      }
+    } catch (e) {
+      debugPrint('Error loading tables: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final tables = context.watch<TableOrderProvider>().tables;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
@@ -32,21 +58,30 @@ class _TableManagementAreaState extends State<TableManagementArea> {
             TableCardItem(
               key: ValueKey("table_index_$i"),
               table: tables[i],
-              onTap: () {
+              onTap: () async {
                 final provider = context.read<TableOrderProvider>();
+                final storeId =
+                    context.read<LoginProvider>().storeId?.toString();
 
                 if (tables[i].hasNewOrder) {
                   provider.checkNewOrder(i);
                 }
-                if (tables[i].hasCallRequest) {
-                  provider.checkCallRequest(i);
+                if (tables[i].hasCallRequest && storeId != null) {
+                  await provider.checkCallRequest(i, storeId);
+                  if (!context.mounted) {
+                    return;
+                  }
                 }
 
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
-                  builder: (_) => ReceiptModal(table: tables[i], tableIndex: i),
+                  builder: (_) => ReceiptModal(
+                    table: tables[i],
+                    tableIndex: i,
+                    storeId: storeId,
+                  ),
                 );
               },
             ),
