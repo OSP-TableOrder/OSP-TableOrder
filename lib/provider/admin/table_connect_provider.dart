@@ -11,25 +11,64 @@ class TableConnectProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  Future<void> loadTables() async {
+  String? _error;
+  String? get error => _error;
+
+  Future<void> loadTables(String storeId) async {
     _isLoading = true;
-    notifyListeners(); // 로딩 시작 알림
+    _error = null;
+    notifyListeners();
 
     try {
-      _tables = await _service.getTables();
+      _tables = await _service.getTables(storeId);
+    } catch (e) {
+      _error = 'Failed to load tables: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> addTable(String name) async {
-    await _service.addTable(name);
-    await loadTables(); // 목록 갱신
+  Future<void> addTable({
+    required String storeId,
+    required String name,
+  }) async {
+    try {
+      _error = null;
+      await _service.addTable(storeId: storeId, name: name);
+      await loadTables(storeId); // 목록 갱신
+    } catch (e) {
+      _error = 'Failed to add table: $e';
+      notifyListeners();
+    }
   }
 
-  Future<void> deleteTable(String id) async {
-    await _service.deleteTable(id);
-    await loadTables(); // 목록 갱신
+  Future<void> updateTable({
+    required String id,
+    required String name,
+    required String storeId,
+  }) async {
+    try {
+      _error = null;
+      await _service.updateTable(id: id, name: name);
+      await loadTables(storeId); // 목록 갱신
+    } catch (e) {
+      _error = 'Failed to update table: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteTable({
+    required String id,
+    required String storeId,
+  }) async {
+    try {
+      _error = null;
+      await _service.deleteTable(id);
+      await loadTables(storeId); // 목록 갱신
+    } catch (e) {
+      _error = 'Failed to delete table: $e';
+      notifyListeners();
+    }
   }
 }

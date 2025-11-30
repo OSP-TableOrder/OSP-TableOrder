@@ -12,48 +12,50 @@ class SideMenuDrawer extends StatelessWidget {
       child: Material(
         elevation: 8,
         color: Colors.grey[100],
-        child: Padding(
-          padding: const EdgeInsets.only(left: 16, top: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '토스플레이스 테이블오더',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16, top: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '토스플레이스 테이블오더',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              MenuItem(
-                title: '홈',
-                fontSize: 14,
-                onTap: () => onSelectMenu('홈'),
-              ),
+                MenuItem(
+                  title: '홈',
+                  fontSize: 14,
+                  onTap: () => onSelectMenu('홈'),
+                ),
 
-              MenuItem(
-                title: '가게정보 수정',
-                fontSize: 14,
-                onTap: () => onSelectMenu('가게정보 수정'),
-              ),
+                MenuItem(
+                  title: '가게정보 수정',
+                  fontSize: 14,
+                  onTap: () => onSelectMenu('가게정보 수정'),
+                ),
 
-              MenuItem(
-                title: '카테고리 수정',
-                fontSize: 14,
-                onTap: () => onSelectMenu('카테고리 수정'),
-              ),
+                MenuItem(
+                  title: '카테고리 수정',
+                  fontSize: 14,
+                  onTap: () => onSelectMenu('카테고리 수정'),
+                ),
 
-              MenuItem(
-                title: '상품 수정',
-                fontSize: 14,
-                onTap: () => onSelectMenu('상품 수정'),
-              ),
+                MenuItem(
+                  title: '상품 수정',
+                  fontSize: 14,
+                  onTap: () => onSelectMenu('상품 수정'),
+                ),
 
-              MenuItem(
-                title: '테이블 연동',
-                fontSize: 14,
-                onTap: () => onSelectMenu('테이블 연동'),
-              ),
-            ],
+                MenuItem(
+                  title: '테이블 연동',
+                  fontSize: 14,
+                  onTap: () => onSelectMenu('테이블 연동'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
