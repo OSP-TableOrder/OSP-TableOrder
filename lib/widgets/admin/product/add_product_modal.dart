@@ -117,10 +117,12 @@ class _ProductAddModalState extends State<ProductAddModal> {
         "상품 추가",
         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      content: SizedBox(
+        width: 380,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             DropdownButtonFormField<String>(
               initialValue: selectedCategoryId,
               items: categories
@@ -132,141 +134,142 @@ class _ProductAddModalState extends State<ProductAddModal> {
               decoration: const InputDecoration(labelText: "카테고리"),
             ),
 
-            const SizedBox(height: 16),
-            // 이미지 선택
-            GestureDetector(
-              onTap: isUploading ? null : _pickImage,
-              child: Container(
-                height: 120,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
-                ),
-                child: selectedImage == null
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.image_outlined,
-                            size: 40,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '이미지 추가',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                      )
-                    : Stack(
-                        children: [
-                          Image.file(
-                            selectedImage!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: GestureDetector(
-                              onTap: () => setState(() => selectedImage = null),
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                padding: const EdgeInsets.all(4),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 16,
+              const SizedBox(height: 16),
+              // 이미지 선택
+              GestureDetector(
+                onTap: isUploading ? null : _pickImage,
+                child: Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[100],
+                  ),
+                  child: selectedImage == null
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.image_outlined,
+                              size: 40,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '이미지 추가',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                          ],
+                        )
+                      : Stack(
+                          children: [
+                            Image.file(
+                              selectedImage!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => setState(() => selectedImage = null),
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(4),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                ),
               ),
-            ),
 
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: "상품명"),
-            ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: "상품명"),
+              ),
 
-            const SizedBox(height: 16),
-            TextField(
-              controller: priceController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "가격"),
-            ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "가격"),
+              ),
 
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("재고"),
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          if (stock > 0) stock--;
-                        });
-                      },
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    Text("$stock"),
-                    IconButton(
-                      onPressed: () => setState(() => stock++),
-                      icon: const Icon(Icons.add_circle_outline),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("재고"),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            if (stock > 0) stock--;
+                          });
+                        },
+                        icon: const Icon(Icons.remove_circle_outline),
+                      ),
+                      Text("$stock"),
+                      IconButton(
+                        onPressed: () => setState(() => stock++),
+                        icon: const Icon(Icons.add_circle_outline),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("품절 여부"),
-                Switch(
-                  value: isSoldOut,
-                  onChanged: (v) => setState(() => isSoldOut = v),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("품절 여부"),
+                  Switch(
+                    value: isSoldOut,
+                    onChanged: (v) => setState(() => isSoldOut = v),
 
-                  activeTrackColor: const Color(0xff2d7ff9),
-                  inactiveThumbColor: Colors.grey,
-                  inactiveTrackColor: Colors.black26,
-                ),
-              ],
-            ),
+                    activeTrackColor: const Color(0xff2d7ff9),
+                    inactiveThumbColor: Colors.grey,
+                    inactiveTrackColor: Colors.black26,
+                  ),
+                ],
+              ),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("노출 여부"),
-                Switch(
-                  value: isActive,
-                  onChanged: (v) => setState(() => isActive = v),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("노출 여부"),
+                  Switch(
+                    value: isActive,
+                    onChanged: (v) => setState(() => isActive = v),
 
-                  activeTrackColor: const Color(0xff2d7ff9),
-                  inactiveThumbColor: Colors.grey,
-                  inactiveTrackColor: Colors.black26,
-                ),
-              ],
-            ),
+                    activeTrackColor: const Color(0xff2d7ff9),
+                    inactiveThumbColor: Colors.grey,
+                    inactiveTrackColor: Colors.black26,
+                  ),
+                ],
+              ),
 
-            const SizedBox(height: 16),
-            TextField(
-              controller: descriptionController,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: "상세 설명"),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: "상세 설명"),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
