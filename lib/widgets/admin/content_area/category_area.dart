@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_order/provider/admin/category_provider.dart';
+import 'package:table_order/provider/admin/login_provider.dart';
 import 'package:table_order/widgets/admin/category/add_category_modal.dart';
 import 'package:table_order/widgets/admin/category/category_list.item.dart';
 import 'package:table_order/widgets/admin/category/edit_category_modal.dart';
@@ -14,16 +15,40 @@ class CategoryArea extends StatefulWidget {
 }
 
 class _CategoryAreaState extends State<CategoryArea> {
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    context.read<CategoryProvider>().loadCategories();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final loginProvider = context.read<LoginProvider>();
+      final storeId = loginProvider.storeId;
+      if (storeId != null) {
+        await context.read<CategoryProvider>().loadCategories(storeId);
+      }
+    } catch (e) {
+      debugPrint('Error loading categories: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CategoryProvider>();
     final categories = provider.categories;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -42,11 +67,14 @@ class _CategoryAreaState extends State<CategoryArea> {
 
               ElevatedButton(
                 onPressed: () {
+                  final storeId = context.read<LoginProvider>().storeId;
+                  if (storeId == null) return;
+
                   showDialog(
                     context: context,
                     builder: (_) => AddCategoryModal(
                       onSubmit: (name) {
-                        provider.addCategory(name);
+                        provider.addCategory(storeId: storeId, name: name);
                       },
                     ),
                   );
@@ -82,7 +110,12 @@ class _CategoryAreaState extends State<CategoryArea> {
                         initialName: item.name,
                         initialActive: item.active,
                         onSubmit: (newName, active) {
-                          provider.updateCategory(item.id, newName, active);
+                          provider.updateCategory(
+                            id: item.id,
+                            name: newName,
+                            active: active,
+                            order: item.order,
+                          );
                         },
                       ),
                     );

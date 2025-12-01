@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_order/models/admin/table_order_info.dart';
+import 'package:table_order/models/common/order_menu_status.dart';
 
 class OrderHistoryTab extends StatelessWidget {
   final TableOrderInfo table;
@@ -8,14 +9,27 @@ class OrderHistoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 모든 주문의 메뉴 항목들 수집
+    final allItems = <dynamic>[];
+    final orderTimes = <String>[];
+    for (final order in table.orders) {
+      allItems.addAll(order.items);
+      if (order.orderTime != null) {
+        orderTimes.add(order.orderTime!);
+      }
+    }
+
+    final hasOrders = allItems.isNotEmpty;
+    final orderTimeDisplay = orderTimes.isNotEmpty ? orderTimes.join(", ") : "-";
+
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoRow("테이블명", table.tableName),
-          _buildInfoRow("주문 상태", table.items.isEmpty ? "비어있음" : "주문중"),
-          _buildInfoRow("주문 시각", table.orderTime ?? "-"),
+          _buildInfoRow("주문 상태", hasOrders ? "주문중" : "비어있음"),
+          _buildInfoRow("주문 시각", orderTimeDisplay),
 
           const SizedBox(height: 20),
           const Divider(thickness: 1),
@@ -26,7 +40,7 @@ class OrderHistoryTab extends StatelessWidget {
             child: Row(
               children: const [
                 Expanded(
-                  flex: 5,
+                  flex: 4,
                   child: Text("메뉴명", style: TextStyle(color: Colors.grey)),
                 ),
                 Expanded(
@@ -38,9 +52,17 @@ class OrderHistoryTab extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  flex: 3,
+                  flex: 2,
                   child: Text(
                     "금액",
+                    textAlign: TextAlign.right,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    "상태",
                     textAlign: TextAlign.right,
                     style: TextStyle(color: Colors.grey),
                   ),
@@ -52,7 +74,7 @@ class OrderHistoryTab extends StatelessWidget {
 
           // 리스트
           Expanded(
-            child: table.items.isEmpty
+            child: allItems.isEmpty
                 ? const Center(
                     child: Text(
                       "주문 내역이 없습니다.",
@@ -60,20 +82,24 @@ class OrderHistoryTab extends StatelessWidget {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: table.items.length,
+                    itemCount: allItems.length,
                     itemBuilder: (_, i) {
-                      final item = table.items[i];
+                      final item = allItems[i];
                       final name = item is Map ? item['name'] : item.toString();
                       final qty = item is Map ? item['quantity'] : 1;
                       final price = item is Map ? item['price'] : 0;
+                      final status = item is Map ? item['status'] ?? 'ORDERED' : 'ORDERED';
                       final total = price * qty;
+
+                      final statusLabel = _getStatusLabel(status);
+                      final statusColor = _getStatusColor(status);
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Row(
                           children: [
                             Expanded(
-                              flex: 5,
+                              flex: 4,
                               child: Text(
                                 name,
                                 style: const TextStyle(fontSize: 16),
@@ -88,11 +114,36 @@ class OrderHistoryTab extends StatelessWidget {
                               ),
                             ),
                             Expanded(
-                              flex: 3,
+                              flex: 2,
                               child: Text(
                                 "$total원",
                                 textAlign: TextAlign.right,
                                 style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    statusLabel,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -141,5 +192,15 @@ class OrderHistoryTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _getStatusLabel(String status) {
+    final menuStatus = orderMenuStatusFromCode(status);
+    return menuStatus.label;
+  }
+
+  Color _getStatusColor(String status) {
+    final menuStatus = orderMenuStatusFromCode(status);
+    return menuStatus.fg;
   }
 }

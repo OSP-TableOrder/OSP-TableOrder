@@ -2,43 +2,47 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_links/app_links.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
+import 'package:table_order/provider/app_state_provider.dart';
 import 'package:table_order/provider/admin/call_staff_provider.dart';
 import 'package:table_order/provider/admin/category_provider.dart';
 import 'package:table_order/provider/admin/login_provider.dart';
-import 'package:table_order/provider/admin/order_log_provider.dart'
-    as admin_order;
+import 'package:table_order/provider/admin/order_log_provider.dart' as admin_order;
 import 'package:table_order/provider/admin/product_provider.dart';
-import 'package:table_order/provider/admin/store_info_provider.dart';
-import 'package:table_order/provider/admin/table_connect_provider.dart';
 import 'package:table_order/provider/admin/table_order_provider.dart';
+import 'package:table_order/provider/admin/table_connect_provider.dart';
+import 'package:table_order/provider/admin/store_info_provider.dart';
+import 'package:table_order/provider/admin/system_admin_provider.dart';
 
 import 'package:table_order/routes/app_routes.dart';
 import 'package:table_order/provider/customer/store_provider.dart';
 import 'package:table_order/provider/customer/menu_provider.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
-import 'package:table_order/provider/customer/order_provider.dart'
-    as customer_order;
+import 'package:table_order/provider/customer/order_provider.dart' as customer_order;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AppStateProvider()),
         ChangeNotifierProvider(create: (_) => StoreProvider()),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => TableOrderProvider()),
+        ChangeNotifierProvider(create: (_) => TableConnectProvider()),
+        ChangeNotifierProvider(create: (_) => StoreInfoProvider()),
         ChangeNotifierProvider(create: (_) => LoginProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
-        ChangeNotifierProvider(create: (_) => StoreInfoProvider()),
-        ChangeNotifierProvider(create: (_) => TableConnectProvider()),
-
-        ChangeNotifierProvider(
-          create: (_) => customer_order.OrderStatusViewModel(),
-        ),
+        ChangeNotifierProvider(create: (_) => SystemAdminProvider()),
+        ChangeNotifierProvider(create: (_) => customer_order.OrderStatusViewModel()),
         ChangeNotifierProvider(create: (_) => CallStaffProvider()),
         ChangeNotifierProvider(create: (_) => admin_order.OrderProvider()),
       ],
@@ -80,11 +84,17 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleLink(Uri uri) {
-    // print("DeepLink : $uri");
+    debugPrint("DeepLink : $uri");
 
     if (uri.host == 'menulist') {
       final storeId = uri.queryParameters['storeId'] ?? 'unknown';
       final tableId = uri.queryParameters['tableId'] ?? 'unknown';
+
+      // AppState에 storeId와 tableId 저장
+      navigatorKey.currentContext?.read<AppStateProvider>().setStoreAndTable(
+            storeId: storeId,
+            tableId: tableId,
+          );
 
       navigatorKey.currentState?.pushNamed(
         AppRoutes.menuList,

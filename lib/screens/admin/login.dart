@@ -12,15 +12,33 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController idController = TextEditingController();
   final TextEditingController pwController = TextEditingController();
+  final ValueNotifier<bool> isFilledNotifier = ValueNotifier(false);
 
   bool isPasswordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    idController.addListener(_updateFilled);
+    pwController.addListener(_updateFilled);
+  }
+
+  void _updateFilled() {
+    isFilledNotifier.value = idController.text.trim().isNotEmpty &&
+        pwController.text.trim().isNotEmpty;
+  }
+
+  @override
+  void dispose() {
+    idController.dispose();
+    pwController.dispose();
+    isFilledNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final vm = context.watch<LoginProvider>();
-    final isFilled =
-        idController.text.trim().isNotEmpty &&
-        pwController.text.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xfff4f6f9),
@@ -62,7 +80,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderSide: BorderSide(color: Color(0xff2d7ff9), width: 2),
                   ),
                 ),
-                onChanged: (_) => setState(() {}),
               ),
 
               const SizedBox(height: 18),
@@ -90,7 +107,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                 ),
-                onChanged: (_) => setState(() {}),
               ),
 
               if (vm.errorMessage != null) ...[
@@ -107,19 +123,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 26),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: isFilled
+              ValueListenableBuilder<bool>(
+                valueListenable: isFilledNotifier,
+                builder: (context, isFilled, child) {
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isFilled
                       ? () async {
+                          final navigator = Navigator.of(context);
+
                           final ok = await vm.login(
                             idController.text.trim(),
                             pwController.text.trim(),
                           );
 
-                          if (ok && mounted) {
-                            // ignore: use_build_context_synchronously
-                            Navigator.pushNamed(context, "/admin/home");
+                          if (!mounted) return;
+
+                          if (ok) {
+                            // role에 따라 다른 화면으로 이동
+                            final role = vm.role;
+                            if (role == 'system_admin') {
+                              navigator.pushNamed("/admin/system-admin");
+                            } else {
+                              navigator.pushNamed("/admin/home");
+                            }
                           }
                         }
                       : null,
@@ -148,7 +176,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                ),
+                    ),
+                  );
+                },
               ),
             ],
           ),

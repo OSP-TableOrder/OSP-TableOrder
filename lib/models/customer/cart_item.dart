@@ -1,7 +1,7 @@
 import 'package:table_order/models/customer/menu.dart';
 
 class CartItem {
-  final int id;
+  final String id;
   final Menu menu;
   final int quantity;
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 // Admin
 import 'package:table_order/screens/admin/admin_home_screen.dart';
 import 'package:table_order/screens/admin/login.dart';
+import 'package:table_order/screens/admin/system_admin_screen.dart';
 
 // User
 import 'package:table_order/screens/role_selection_screen.dart';
@@ -15,6 +16,7 @@ class AppRoutes {
   static const String roleSelection = '/';
   static const String adminHome = '/admin/home';
   static const String adminLogin = '/admin/login';
+  static const String systemAdmin = '/admin/system-admin';
 
   // 고객용 라우트
   static const String menuList = '/user/menuList';
@@ -35,10 +37,13 @@ class AppRoutes {
       case adminLogin:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
 
+      case systemAdmin:
+        return MaterialPageRoute(builder: (_) => const SystemAdminScreen());
+
       // User
       case menuList:
         // final args = settings.arguments as Map<String, String>;
-        return MaterialPageRoute(builder: (_) => MenuScreen(storeId: 1));
+        return MaterialPageRoute(builder: (_) => const MenuScreen());
 
       case cart:
         return MaterialPageRoute(builder: (_) => const CartScreen());

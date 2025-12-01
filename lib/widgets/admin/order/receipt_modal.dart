@@ -6,11 +6,13 @@ import 'package:table_order/widgets/admin/order/order_history_tab.dart';
 class ReceiptModal extends StatelessWidget {
   final TableOrderInfo table;
   final int tableIndex;
+  final String? storeId;
 
   const ReceiptModal({
     super.key,
     required this.table,
     required this.tableIndex,
+    this.storeId,
   });
 
   @override
@@ -55,13 +57,43 @@ class ReceiptModal extends StatelessWidget {
                   // 주문 내역
                   OrderHistoryTab(table: table),
 
-                  // 주문 수정
-                  EditOrderModal(tableIndex: tableIndex, table: table),
+                  // 주문 수정 - 다중 주문 지원
+                  _buildOrderEditView(context),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // 주문 수정 뷰 - 다중 주문을 선택할 수 있도록 구성
+  Widget _buildOrderEditView(BuildContext context) {
+    if (table.orders.isEmpty) {
+      return const Center(child: Text("수정할 주문이 없습니다."));
+    }
+
+    // 여러 주문도 한 화면에서 모두 보여줌
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        children: [
+          for (int i = 0; i < table.orders.length; i++)
+            Padding(
+              padding: EdgeInsets.only(top: i == 0 ? 0 : 16),
+              child: EditOrderModal(
+                tableIndex: tableIndex,
+                orderIndex: i,
+                table: table,
+                storeId: storeId,
+                showOrderHeader: table.orders.length > 1,
+                orderLabel: table.orders[i].orderTime != null
+                    ? "${table.orders[i].orderTime} 주문"
+                    : "주문 ${i + 1}",
+              ),
+            ),
+        ],
       ),
     );
   }

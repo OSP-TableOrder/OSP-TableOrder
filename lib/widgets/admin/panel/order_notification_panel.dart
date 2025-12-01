@@ -46,41 +46,50 @@ class OrderNotificationPanel extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            for (final log in orderLogs)
-              Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        log.tableName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+            if (orderLogs.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  "새로운 주문이 없습니다.",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              )
+            else
+              for (final log in orderLogs)
+                Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          log.tableName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                      Text(
-                        log.time,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+                        Text(
+                          log.time,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      log.orderSummary,
-                      style: const TextStyle(fontSize: 13),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Divider(color: Colors.grey[300]),
-                  const SizedBox(height: 8),
-                ],
-              ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        log.orderSummary,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(color: Colors.grey[300]),
+                    const SizedBox(height: 8),
+                  ],
+                ),
           ],
         ),
       ),

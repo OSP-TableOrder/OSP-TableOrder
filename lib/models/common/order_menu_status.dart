@@ -33,3 +33,14 @@ extension OrderMenuStatusX on OrderMenuStatus {
     OrderMenuStatus.canceled => const Color(0xFFD43C3C),
   };
 }
+
+/// 상태 코드 문자열을 OrderMenuStatus enum으로 변환
+OrderMenuStatus orderMenuStatusFromCode(String code) {
+  return switch (code) {
+    'ORDERED' => OrderMenuStatus.ordered,
+    'COOKING' => OrderMenuStatus.cooking,
+    'COMPLETED' => OrderMenuStatus.completed,
+    'CANCELED' => OrderMenuStatus.canceled,
+    _ => OrderMenuStatus.ordered,
+  };
+}
