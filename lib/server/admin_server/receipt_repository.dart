@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_order/models/admin/table_order_info.dart';
+import 'package:table_order/server/admin_server/menu_repository.dart';
 
 /// 영수증(Receipt) 도메인 Repository
 /// Receipts 컬렉션의 CRUD 및 Firestore 데이터 접근을 담당하는 계층
@@ -10,6 +11,7 @@ import 'package:table_order/models/admin/table_order_info.dart';
 /// - 정규화: Receipt.orders[] (Order ID 참조) - 마이그레이션 이후
 class ReceiptRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final MenuRepository _menuRepository = MenuRepository();
   static const String _receiptsCollection = 'Receipts';
   static const String _ordersCollection = 'Orders';
   static const String _tablesCollection = 'Tables';
@@ -408,12 +410,25 @@ class ReceiptRepository {
 
   /// Receipt 문서에서 메뉴 항목 추출 (N+1 쿼리 최적화)
   /// Receipt 문서는 이미 로드되었으므로 receiptData에서 직접 추출
+  ///
+  /// 우선순위:
+  /// 1. Receipts.menus[]가 있으면 그것을 사용 (레거시 데이터)
+  /// 2. Receipts.menus[]가 없으면 Orders 컬렉션에서 menuId 기반 추출
   Future<Map<String, dynamic>> _fetchOrdersByReceiptWithMetadata(
     String receiptId,
     Map<String, dynamic> receiptData,
   ) async {
     try {
-      final items = _extractMenusFromReceipt(receiptData);
+      // 우선 Receipts.menus[]에서 메뉴 추출 시도
+      final menus = receiptData['menus'] as List<dynamic>? ?? [];
+      if (menus.isNotEmpty) {
+        final items = _extractMenusFromReceipt(receiptData);
+        return {'items': items, 'receiptId': receiptId};
+      }
+
+      // Receipts.menus[]가 없으면 Orders 컬렉션에서 추출
+      final orderId = receiptData['orderId'] as String?;
+      final items = await _extractMenusFromOrders(receiptId, orderId);
       return {'items': items, 'receiptId': receiptId};
     } catch (e) {
       developer.log(
@@ -456,6 +471,100 @@ class ReceiptRepository {
     }
 
     return items;
+  }
+
+  /// Receipt의 Orders 컬렉션 데이터로부터 메뉴 항목 추출
+  /// Orders 컬렉션의 정규화된 구조(menuId 참조)를 UI 표시 형식으로 변환
+  ///
+  /// 주의: 이 메서드는 Orders 데이터가 있을 때만 사용
+  /// Receipts.menus[]가 비어있으면 이 메서드를 사용해야 함
+  Future<List<dynamic>> _extractMenusFromOrders(
+    String receiptId,
+    String? orderId,
+  ) async {
+    if (orderId == null || orderId.isEmpty) {
+      return [];
+    }
+
+    try {
+      // Orders 컬렉션에서 Order 조회
+      final orderDoc = await _firestore
+          .collection(_ordersCollection)
+          .doc(orderId)
+          .get();
+
+      if (!orderDoc.exists) {
+        return [];
+      }
+
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final items = orderData['items'] as List<dynamic>? ?? [];
+
+      // 모든 menuId 추출
+      final menuIds = <String>[];
+      for (final item in items) {
+        if (item is Map<String, dynamic>) {
+          final menuId = item['menuId'] as String?;
+          if (menuId != null && menuId.isNotEmpty) {
+            menuIds.add(menuId);
+          }
+        }
+      }
+
+      // 배치 조회: 모든 menuId에 해당하는 Menu 정보 조회
+      final menus = await _menuRepository.getMenusByIds(menuIds);
+      final menuMap = <String, Map<String, dynamic>>{};
+      for (final menu in menus) {
+        menuMap[menu.id] = {
+          'name': menu.name,
+          'price': menu.price,
+        };
+      }
+
+      final displayItems = <dynamic>[];
+
+      for (final item in items) {
+        if (item is Map<String, dynamic>) {
+          final menuId = item['menuId'] as String?;
+          final quantity = item['quantity'] as int? ?? 1;
+          final status = item['status'] as String? ?? 'ordered';
+          final orderedAtTimestamp = item['orderedAt'] as Timestamp?;
+          final priceAtOrder = item['priceAtOrder'] as int? ?? 0;
+
+          // orderedAt 시간 포맷팅
+          String? orderedAtStr;
+          if (orderedAtTimestamp != null) {
+            final dateTime = orderedAtTimestamp.toDate();
+            final hour = dateTime.hour.toString().padLeft(2, '0');
+            final minute = dateTime.minute.toString().padLeft(2, '0');
+            final second = dateTime.second.toString().padLeft(2, '0');
+            orderedAtStr = '$hour:$minute:$second';
+          }
+
+          // Menu 정보 조회
+          final menuInfo = menuId != null ? menuMap[menuId] : null;
+          final menuName = menuInfo?['name'] ?? '미정의';
+
+          displayItems.add({
+            'menuId': menuId,
+            'quantity': quantity,
+            'status': status,
+            'orderedAt': orderedAtStr,
+            'priceAtOrder': priceAtOrder,
+            'name': menuName,
+            'price': priceAtOrder,  // 주문 시점의 가격 사용
+          });
+        }
+      }
+
+      return displayItems;
+    } catch (e) {
+      developer.log(
+        'Error extracting menus from orders: $e',
+        name: 'ReceiptRepository',
+      );
+      return [];
+    }
   }
 
   /// 시간 포맷팅

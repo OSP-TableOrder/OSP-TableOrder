@@ -423,8 +423,12 @@ class OrderServerStub {
   }
 
   /// 메뉴 추가: 새로운 OrderMenu 항목 추가
-  /// OrderMenu의 ID는 Firestore에서 자동 생성됨
-  /// 동시에 정규화된 Orders 컬렉션에도 저장
+  /// 정규화된 Orders 컬렉션에만 저장 (Receipts.menus[] 제거됨)
+  ///
+  /// 프로세스:
+  /// 1. Receipts에서 orderId 조회
+  /// 2. OrderServer.addMenuItem()으로 Orders에 항목 추가
+  /// 3. UI용 Order 반환 (메뉴 정보는 UI에서 별도 조회)
   Future<Order?> addMenu(String receiptId, OrderMenu newMenu) async {
     try {
       final docRef = _firestore.collection(_collectionName).doc(receiptId);
@@ -435,58 +439,43 @@ class OrderServerStub {
       final data = snapshot.data();
       if (data == null) return null;
 
-      final order = _parseOrder(receiptId, data);
-      if (order == null) return null;
+      // Receipts에서 orderId 조회
+      final orderId = data['orderId'] as String?;
+      if (orderId == null) {
+        developer.log('orderId not found in receipt $receiptId', name: 'OrderServerStub');
+        return null;
+      }
 
-      // Firestore 자동 생성 ID 획득 (문서를 실제로 생성하지는 않음)
-      final menuId = _firestore.collection(_collectionName).doc().id;
-
-      // 새로운 OrderMenu를 Firestore가 생성한 ID와 함께 생성
-      final menuWithId = OrderMenu(
-        id: menuId,
-        status: newMenu.status,
+      // Orders 컬렉션에 메뉴 추가 (정규화된 구조)
+      final orderServer = OrderServer();
+      final addedOrder = await orderServer.addMenuItem(
+        orderId: orderId,
+        menuId: newMenu.menu.id,
         quantity: newMenu.quantity,
-        completedCount: newMenu.completedCount,
-        menu: newMenu.menu,
-        orderedAt: DateTime.now(),
+        priceAtOrder: newMenu.menu.price,
       );
 
-      // 기존 메뉴들
-      final updatedMenus = List<OrderMenu>.from(order.menus);
-      updatedMenus.add(menuWithId);
+      if (addedOrder == null) {
+        developer.log('Failed to add menu to order $orderId', name: 'OrderServerStub');
+        return null;
+      }
 
-      // 총 금액 재계산
-      final newTotalPrice = updatedMenus
-          .where((m) => m.status.code != 'CANCELED')
-          .fold<int>(0, (acc, m) => acc + (m.menu.price * m.quantity));
-
-      // 1) Receipts 컬렉션에 업데이트
+      // Receipts는 최소 정보만 유지 (totalPrice는 Orders에서 계산)
       await docRef.update({
-        'menus': updatedMenus.map((m) => _menuToMap(m)).toList(),
-        'totalPrice': newTotalPrice,
+        'totalPrice': addedOrder.totalPrice,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 2) Orders 컬렉션에도 저장 (정규화된 구조)
-      // Receipt에서 orderId를 가져옴
-      final orderId = data['orderId'] as String?;
-      if (orderId != null) {
-        final orderServer = OrderServer();
-        await orderServer.addMenuItem(
-          orderId: orderId,
-          menuId: newMenu.menu.id,
-          quantity: newMenu.quantity,
-          priceAtOrder: newMenu.menu.price,
-        );
-      }
-
+      // UI용 Order 반환
+      // 메뉴 정보는 UI에서 Orders 데이터로부터 별도 조회
       return Order(
         id: receiptId,
-        storeId: order.storeId,
-        tableId: order.tableId,
-        totalPrice: newTotalPrice,
-        menus: updatedMenus,
-        createdAt: order.createdAt,
+        storeId: addedOrder.storeId,
+        tableId: addedOrder.tableId,
+        totalPrice: addedOrder.totalPrice,
+        menus: [],  // 비정규화된 메뉴는 사용 안 함
+        status: OrderStatus.unpaid,
+        createdAt: addedOrder.createdAt,
       );
     } catch (e) {
       developer.log('Error adding menu: $e', name: 'OrderServerStub');
@@ -495,7 +484,10 @@ class OrderServerStub {
   }
 
   /// 메뉴 취소: 상태를 canceled로 변경
-  /// 동시에 정규화된 Orders 컬렉션에도 반영
+  /// 정규화된 Orders 컬렉션에만 반영 (Receipts.menus[] 제거됨)
+  ///
+  /// 주의: menuId는 OrderMenu의 ID (Firestore에서 생성한 고유 ID)
+  /// 이는 Menus 컬렉션의 ID와는 다름
   Future<Order?> cancelMenu(String receiptId, String menuId) async {
     try {
       final docRef = _firestore.collection(_collectionName).doc(receiptId);
@@ -506,49 +498,73 @@ class OrderServerStub {
       final data = snapshot.data();
       if (data == null) return null;
 
-      final order = _parseOrder(receiptId, data);
-      if (order == null) return null;
+      // Receipts에서 orderId 조회
+      final orderId = data['orderId'] as String?;
+      if (orderId == null) {
+        developer.log('orderId not found in receipt $receiptId', name: 'OrderServerStub');
+        return null;
+      }
 
-      final menuIndex = order.menus.indexWhere((m) => m.id == menuId);
-      if (menuIndex == -1) return order;
+      // Orders 컬렉션에서 해당 menuId의 인덱스 찾기
+      final orderDoc = await _firestore
+          .collection('Orders')
+          .doc(orderId)
+          .get();
 
-      final target = order.menus[menuIndex];
-      if (!target.isCancelable) return order;
+      if (!orderDoc.exists) {
+        developer.log('Order $orderId not found', name: 'OrderServerStub');
+        return null;
+      }
 
-      // 메뉴 상태 변경
-      final updatedMenus = List<OrderMenu>.from(order.menus);
-      updatedMenus[menuIndex] = target.copyWith(status: OrderMenuStatus.canceled);
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final items = orderData['items'] as List<dynamic>? ?? [];
 
-      // 총 금액 재계산
-      final newTotalPrice = updatedMenus
-          .where((m) => m.status.code != 'CANCELED')
-          .fold<int>(0, (acc, m) => acc + (m.menu.price * m.quantity));
+      // menuId가 일치하는 항목 찾기 (주의: menuId는 OrderMenu의 ID, 메뉴 ID 아님)
+      // 현재 구조에서는 menuId를 직접 비교할 수 없음
+      // 대신 클라이언트에서 제공한 menuId로 Orders에서 항목 찾기
+      int itemIndex = -1;
+      for (int i = 0; i < items.length; i++) {
+        final item = items[i] as Map<String, dynamic>;
+        // menuId (주문 항목 ID가 아님)로 비교할 경우 추가 정보 필요
+        // 현재는 간단히 menuId를 검색
+        if (item['id'] == menuId) {
+          itemIndex = i;
+          break;
+        }
+      }
 
-      // 1) Receipts 컬렉션에 업데이트
+      if (itemIndex == -1) {
+        developer.log('Menu item $menuId not found in order $orderId', name: 'OrderServerStub');
+        return null;
+      }
+
+      // Orders 컬렉션에서 메뉴 취소
+      final orderServer = OrderServer();
+      final canceledOrder = await orderServer.cancelMenuItem(
+        orderId: orderId,
+        itemIndex: itemIndex,
+      );
+
+      if (canceledOrder == null) {
+        developer.log('Failed to cancel menu in order $orderId', name: 'OrderServerStub');
+        return null;
+      }
+
+      // Receipts는 최소 정보만 유지
       await docRef.update({
-        'menus': updatedMenus.map((m) => _menuToMap(m)).toList(),
-        'totalPrice': newTotalPrice,
+        'totalPrice': canceledOrder.totalPrice,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 2) Orders 컬렉션에도 업데이트 (정규화된 구조)
-      // Receipt에서 orderId를 가져옴
-      final orderId = data['orderId'] as String?;
-      if (orderId != null) {
-        final orderServer = OrderServer();
-        await orderServer.cancelMenuItem(
-          orderId: orderId,
-          itemIndex: menuIndex,
-        );
-      }
-
+      // UI용 Order 반환
       return Order(
         id: receiptId,
-        storeId: order.storeId,
-        tableId: order.tableId,
-        totalPrice: newTotalPrice,
-        menus: updatedMenus,
-        createdAt: order.createdAt,
+        storeId: canceledOrder.storeId,
+        tableId: canceledOrder.tableId,
+        totalPrice: canceledOrder.totalPrice,
+        menus: [],  // 비정규화된 메뉴는 사용 안 함
+        status: OrderStatus.unpaid,
+        createdAt: canceledOrder.createdAt,
       );
     } catch (e) {
       developer.log('Error canceling menu: $e', name: 'OrderServerStub');
@@ -641,28 +657,6 @@ class OrderServerStub {
     if (statusStr.contains('completed')) return OrderMenuStatus.completed;
     if (statusStr.contains('canceled')) return OrderMenuStatus.canceled;
     return OrderMenuStatus.ordered;
-  }
-
-  /// OrderMenu를 Map으로 변환
-  Map<String, dynamic> _menuToMap(OrderMenu menu) {
-    return {
-      'id': menu.id,
-      'status': menu.status.code,  // enum의 code를 사용 (예: 'ORDERED', 'COOKING')
-      'quantity': menu.quantity,
-      'completedCount': menu.completedCount,
-      'orderedAt': menu.orderedAt != null ? Timestamp.fromDate(menu.orderedAt!) : null,
-      'menu': {
-        'id': menu.menu.id,
-        'storeId': menu.menu.storeId,
-        'categoryId': menu.menu.categoryId,
-        'name': menu.menu.name,
-        'description': menu.menu.description,
-        'imageUrl': menu.menu.imageUrl,
-        'price': menu.menu.price,
-        'isSoldOut': menu.menu.isSoldOut,
-        'isRecommended': menu.menu.isRecommended,
-      },
-    };
   }
 
   String _generateReceiptId(DateTime now) {
