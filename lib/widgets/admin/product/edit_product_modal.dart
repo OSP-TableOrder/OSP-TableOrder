@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:table_order/models/admin/product.dart';
 import 'package:table_order/provider/admin/category_provider.dart';
 import 'package:table_order/service/admin/image_upload_service.dart';
+import 'package:table_order/widgets/common/platform_network_image.dart';
 
 class ProductEditModal extends StatefulWidget {
   final Product product; // Product 객체 그대로 받음
@@ -171,8 +172,8 @@ class _ProductEditModalState extends State<ProductEditModal> {
                   ),
                   child: selectedImage == null
                     ? (widget.product.imageUrl != null
-                        ? Image.network(
-                            widget.product.imageUrl!,
+                        ? PlatformNetworkImage(
+                            imageUrl: widget.product.imageUrl!,
                             fit: BoxFit.cover,
                           )
                         : Column(
