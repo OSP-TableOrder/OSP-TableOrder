@@ -374,7 +374,7 @@ class ReceiptRepository {
       // 새 메뉴 항목 추가
       final newMenu = {
         ...menuData,
-        'orderedAt': DateTime.now().toIso8601String(),
+        'orderedAt': Timestamp.fromDate(DateTime.now()),
         'status': menuData['status'] ?? 'ordered',
       };
 

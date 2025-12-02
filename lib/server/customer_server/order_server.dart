@@ -182,7 +182,7 @@ class OrderServer {
         'quantity': quantity,
         'status': 'ordered',
         'completedCount': 0,
-        'orderedAt': DateTime.now().toIso8601String(),
+        'orderedAt': Timestamp.fromDate(DateTime.now()),
         'priceAtOrder': priceAtOrder,
       });
 
