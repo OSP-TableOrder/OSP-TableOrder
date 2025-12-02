@@ -377,7 +377,12 @@ class OrderServerStub {
     }
   }
 
-  /// 주문 조회 (ID로)
+  /// 주문 조회 (ID로) - Orders 정규화 구조에서 Menu 정보 포함
+  ///
+  /// 프로세스:
+  /// 1. Receipts에서 기본 주문 정보 조회
+  /// 2. Receipts.orderId를 통해 Orders 컬렉션의 Menu 정보 로드
+  /// 3. 메뉴 정보 포함된 Order 반환
   Future<Order?> findById(String orderId) async {
     try {
       final DocumentSnapshot snapshot = await _firestore
@@ -388,6 +393,45 @@ class OrderServerStub {
       if (!snapshot.exists) return null;
 
       final data = snapshot.data() as Map<String, dynamic>?;
+      if (data == null) return null;
+
+      // Orders 컬렉션의 orderId 획득
+      final ordersId = data['orderId'] as String?;
+
+      // 1. Legacy Receipts.menus[]에서 로드 (backward compatibility)
+      final menusData = data['menus'] as List<dynamic>? ?? [];
+
+      if (menusData.isNotEmpty) {
+        // Legacy 경로: Receipts.menus[] 사용
+        return _parseOrder(snapshot.id, data);
+      }
+
+      // 2. Orders 정규화 구조에서 Menu 정보 로드
+      if (ordersId != null && ordersId.isNotEmpty) {
+        final ordersMenus = await _loadMenusFromOrders(ordersId);
+        if (ordersMenus.isNotEmpty) {
+          final status = data['status'] as String? ?? 'unpaid';
+          final orderStatus = status == 'paid' ? OrderStatus.paid : OrderStatus.unpaid;
+
+          DateTime? createdAt;
+          final timestamp = data['createdAt'] as Timestamp?;
+          if (timestamp != null) {
+            createdAt = timestamp.toDate();
+          }
+
+          return Order(
+            id: snapshot.id,
+            storeId: data['storeId'] as String? ?? '',
+            tableId: data['tableId'] as String? ?? '',
+            totalPrice: (data['totalPrice'] as num?)?.toInt() ?? 0,
+            menus: ordersMenus,
+            status: orderStatus,
+            createdAt: createdAt,
+          );
+        }
+      }
+
+      // 3. Fallback: 메뉴 없는 Order 반환
       return _parseOrder(snapshot.id, data);
     } catch (e) {
       developer.log('Error fetching order: $e', name: 'OrderServerStub');
@@ -395,8 +439,13 @@ class OrderServerStub {
     }
   }
 
-  /// 주문 조회 (storeId + tableId로 미정산 주문 찾기)
+  /// 주문 조회 (storeId + tableId로 미정산 주문 찾기) - Orders 정규화 구조에서 Menu 정보 포함
   /// QR 코드 스캔 시 같은 테이블의 기존 주문이 있는지 확인
+  ///
+  /// 프로세스:
+  /// 1. Receipts에서 기존 미정산 주문 조회
+  /// 2. Orders 컬렉션의 Menu 정보 배치 로드
+  /// 3. 메뉴 정보 포함된 Order 반환
   Future<Order?> findUnpaidOrderByTable({
     required String storeId,
     required String tableId,
@@ -415,6 +464,45 @@ class OrderServerStub {
 
       final doc = snapshot.docs.first;
       final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return null;
+
+      // Orders 컬렉션의 orderId 획득
+      final ordersId = data['orderId'] as String?;
+
+      // 1. Legacy Receipts.menus[]에서 로드 (backward compatibility)
+      final menusData = data['menus'] as List<dynamic>? ?? [];
+
+      if (menusData.isNotEmpty) {
+        // Legacy 경로: Receipts.menus[] 사용
+        return _parseOrder(doc.id, data);
+      }
+
+      // 2. Orders 정규화 구조에서 Menu 정보 로드
+      if (ordersId != null && ordersId.isNotEmpty) {
+        final ordersMenus = await _loadMenusFromOrders(ordersId);
+        if (ordersMenus.isNotEmpty) {
+          final status = data['status'] as String? ?? 'unpaid';
+          final orderStatus = status == 'paid' ? OrderStatus.paid : OrderStatus.unpaid;
+
+          DateTime? createdAt;
+          final timestamp = data['createdAt'] as Timestamp?;
+          if (timestamp != null) {
+            createdAt = timestamp.toDate();
+          }
+
+          return Order(
+            id: doc.id,
+            storeId: data['storeId'] as String? ?? '',
+            tableId: data['tableId'] as String? ?? '',
+            totalPrice: (data['totalPrice'] as num?)?.toInt() ?? 0,
+            menus: ordersMenus,
+            status: orderStatus,
+            createdAt: createdAt,
+          );
+        }
+      }
+
+      // 3. Fallback: 메뉴 없는 Order 반환
       return _parseOrder(doc.id, data);
     } catch (e) {
       developer.log('Error fetching unpaid order: $e', name: 'OrderServerStub');
@@ -480,6 +568,120 @@ class OrderServerStub {
     } catch (e) {
       developer.log('Error adding menu: $e', name: 'OrderServerStub');
       return null;
+    }
+  }
+
+  /// Orders 컬렉션에서 Menu 정보를 조회하여 OrderMenu 객체 생성 (N+1 쿼리 방지)
+  ///
+  /// 정규화된 Orders 구조에서:
+  /// 1. Orders 컬렉션의 items[]에서 menuId 추출
+  /// 2. Menus 컬렉션에서 배치 조회
+  /// 3. OrderMenu 객체 생성
+  Future<List<OrderMenu>> _loadMenusFromOrders(String orderId) async {
+    try {
+      final orderDoc = await _firestore
+          .collection('Orders')
+          .doc(orderId)
+          .get();
+
+      if (!orderDoc.exists) {
+        developer.log('Order $orderId not found', name: 'OrderServerStub');
+        return [];
+      }
+
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final items = orderData['items'] as List<dynamic>? ?? [];
+
+      if (items.isEmpty) {
+        return [];
+      }
+
+      // 1. menuId 추출
+      final menuIds = <String>[];
+      final itemDataMap = <String, Map<String, dynamic>>{};
+
+      for (int i = 0; i < items.length; i++) {
+        final item = items[i] as Map<String, dynamic>;
+        final menuId = item['menuId'] as String?;
+
+        if (menuId != null && menuId.isNotEmpty) {
+          menuIds.add(menuId);
+          itemDataMap[menuId] = item;
+        }
+      }
+
+      if (menuIds.isEmpty) {
+        return [];
+      }
+
+      // 2. Menus 배치 조회 (N+1 쿼리 방지, 최대 10개씩 청킹)
+      final menus = <String, Menu>{};
+      for (int i = 0; i < menuIds.length; i += 10) {
+        final chunk = menuIds.sublist(i, i + 10 > menuIds.length ? menuIds.length : i + 10);
+
+        final snapshot = await _firestore
+            .collection('Menus')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+
+        for (final doc in snapshot.docs) {
+          try {
+            final menu = Menu.fromJson({
+              ...doc.data(),
+              'id': doc.id,
+            });
+            menus[doc.id] = menu;
+          } catch (e) {
+            developer.log(
+              'Error parsing menu ${doc.id}: $e',
+              name: 'OrderServerStub',
+            );
+          }
+        }
+      }
+
+      // 3. OrderMenu 객체 생성
+      final orderMenus = <OrderMenu>[];
+      for (final menuId in menuIds) {
+        final itemData = itemDataMap[menuId]!;
+        final menu = menus[menuId];
+
+        if (menu == null) {
+          developer.log(
+            'Menu $menuId not found in Menus collection',
+            name: 'OrderServerStub',
+          );
+          continue;
+        }
+
+        // orderedAt 파싱
+        DateTime? orderedAt;
+        final orderedAtValue = itemData['orderedAt'];
+        if (orderedAtValue is Timestamp) {
+          orderedAt = orderedAtValue.toDate();
+        }
+
+        final status = _parseOrderMenuStatus(itemData['status'] as String? ?? 'ordered');
+
+        final orderMenu = OrderMenu(
+          id: menuId,  // menuId를 OrderMenu.id로 사용
+          status: status,
+          quantity: itemData['quantity'] as int? ?? 0,
+          completedCount: itemData['completedCount'] as int? ?? 0,
+          menu: menu,
+          orderedAt: orderedAt,
+        );
+
+        orderMenus.add(orderMenu);
+      }
+
+      return orderMenus;
+    } catch (e) {
+      developer.log(
+        'Error loading menus from Orders: $e',
+        name: 'OrderServerStub',
+      );
+      return [];
     }
   }
 
