@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Order 모델 - 정규화된 주문 일괄 (Normalized)
 ///
 /// Firestore의 Orders 컬렉션에 저장됨.
@@ -107,12 +109,8 @@ class Order {
       tableId: json['tableId'] ?? '',
       items: items,
       totalPrice: (json['totalPrice'] as num?)?.toInt() ?? 0,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
-          : null,
+      createdAt: _parseDateTime(json['createdAt']),
+      updatedAt: _parseDateTime(json['updatedAt']),
     );
   }
 
@@ -127,6 +125,23 @@ class Order {
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
+  }
+
+  /// Firestore의 Timestamp 또는 String을 DateTime으로 파싱
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
   }
 }
 
@@ -196,11 +211,26 @@ class OrderItem {
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       status: json['status'] ?? 'ordered',
       completedCount: (json['completedCount'] as num?)?.toInt() ?? 0,
-      orderedAt: json['orderedAt'] != null
-          ? DateTime.parse(json['orderedAt'] as String)
-          : null,
+      orderedAt: _parseDateTime(json['orderedAt']),
       priceAtOrder: (json['priceAtOrder'] as num?)?.toInt() ?? 0,
     );
+  }
+
+  /// Firestore의 Timestamp 또는 String을 DateTime으로 파싱
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
   }
 
   /// OrderItem을 JSON으로 변환
