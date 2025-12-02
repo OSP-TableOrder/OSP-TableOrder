@@ -14,6 +14,9 @@ class OrderStatusViewModel extends ChangeNotifier {
   String? _receiptId;
   String? get receiptId => _receiptId;
 
+  String? _orderId;  // Orders 컬렉션의 Order ID (정규화된 구조용)
+  String? get orderId => _orderId;
+
   Order _order = const Order(
     id: "0",
     storeId: "",

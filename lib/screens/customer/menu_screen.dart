@@ -12,9 +12,13 @@ import 'package:table_order/provider/customer/store_provider.dart';
 import 'package:table_order/models/customer/store.dart';
 import 'package:table_order/screens/customer/order_status_screen.dart';
 import 'package:table_order/widgets/customer/call_staff_modal/call_staff_modal.dart';
-import 'package:table_order/provider/admin/call_staff_provider.dart';
+import 'package:table_order/provider/admin/staff_request_provider.dart';
 import 'package:table_order/routes/app_routes.dart';
 import 'package:table_order/provider/app_state_provider.dart';
+import 'package:table_order/widgets/customer/menu_category_bar.dart';
+import 'package:table_order/widgets/customer/menu_category_header.dart';
+import 'package:table_order/widgets/customer/measured_size.dart';
+import 'package:table_order/widgets/customer/store_info_header.dart';
 
 class MenuScreen extends StatefulWidget {
   /// storeId: 라우트 인자로 직접 전달된 경우, 또는 AppState에서 자동으로 읽음
@@ -29,9 +33,17 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen> {
   bool _noticeExpanded = false;
   late final ScrollController _scrollController;
-  final Map<String, GlobalKey> _categoryKeys = {};
-  String? _selectedCategory;
+  final Map<String?, GlobalKey> _categoryKeys = {}; // categoryId를 key로 사용
+  final Map<String?, double> _categoryHeights = {}; // 카테고리 헤더 실제 높이
+  final Map<String, double> _menuItemHeights = {}; // 메뉴 카드 실제 높이
+  double? _storeHeaderHeight; // 스토어 헤더 실제 높이
+  String? _selectedCategoryId; // categoryId 기반 선택 상태
+  String? _manuallySelectedCategoryId; // 사용자가 수동으로 선택한 카테고리
+  bool _isScrolling = false; // 스크롤 애니메이션 진행 중 플래그
   static const double _categoryBarHeight = 60;
+  static const double _defaultStoreHeaderHeight = 220;
+  static const double _defaultCategoryHeaderHeight = 50;
+  static const double _defaultMenuItemHeight = 215;
 
   @override
   void initState() {
@@ -53,7 +65,10 @@ class _MenuScreenState extends State<MenuScreen> {
     String? storeId,
     String? tableId,
   ) async {
-    if (storeId == null || storeId.isEmpty || tableId == null || tableId.isEmpty) {
+    if (storeId == null ||
+        storeId.isEmpty ||
+        tableId == null ||
+        tableId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('가게 정보를 찾을 수 없습니다. 관리자에게 문의해주세요.')),
       );
@@ -83,9 +98,9 @@ class _MenuScreenState extends State<MenuScreen> {
     if (!context.mounted) return null;
 
     if (!hasExisting) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('진행 중인 주문이 없습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('진행 중인 주문이 없습니다.')));
       return null;
     }
 
@@ -132,14 +147,14 @@ class _MenuScreenState extends State<MenuScreen> {
     if (storeId == null || tableId == null) return;
     final safeTableId = tableId;
 
-    final callStaffProvider = context.read<CallStaffProvider>();
+    final staffRequestProvider = context.read<StaffRequestProvider>();
     final tableDisplay = tableName ?? safeTableId;
 
     await showCallStaffDialog(
       context,
       receiptId: receiptId,
       onSubmit: (receiptId, message, items) async {
-        await callStaffProvider.sendCallRequest(
+        await staffRequestProvider.addCallRequest(
           storeId: storeId,
           tableId: tableId,
           tableName: tableDisplay,
@@ -154,60 +169,228 @@ class _MenuScreenState extends State<MenuScreen> {
     Navigator.pushNamed(context, AppRoutes.cart);
   }
 
-  Future<void> _scrollToCategory(String category) async {
-    final key = _categoryKeys[category];
-    if (key == null) return;
-    final context = key.currentContext;
-    if (context == null) return;
-
-    await Scrollable.ensureVisible(
-      context,
-      alignment: 0,
-      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-    );
-
+  Future<void> _scrollToCategoryId(String? categoryId) async {
     if (!_scrollController.hasClients) return;
-    final adjusted = (_scrollController.offset - _categoryBarHeight)
-        .clamp(_scrollController.position.minScrollExtent, _scrollController.position.maxScrollExtent);
+
+    // Prevent duplicate scrolling while animation is in progress
+    if (_isScrolling) {
+      debugPrint(
+        '[SCROLL] Already scrolling, ignoring category click: $categoryId',
+      );
+      return;
+    }
+
+    // Mark that user manually selected this category
+    _manuallySelectedCategoryId = categoryId;
+    _isScrolling = true;
+    debugPrint('[SCROLL] User clicked category: $categoryId');
+
+    final menuProvider = context.read<MenuProvider>();
+    final displayList = menuProvider.displayList;
+
+    // displayList에서 해당 categoryId의 카테고리 헤더 위치 찾기
+    int targetIndex = -1;
+    for (int i = 0; i < displayList.length; i++) {
+      final item = displayList[i];
+      if (item is Map<String, dynamic>) {
+        final itemCategoryId = item['categoryId'] as String?;
+        final isHeader = item.containsKey('name');
+        if (isHeader && itemCategoryId == categoryId) {
+          targetIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (targetIndex == -1) {
+      debugPrint('Category $categoryId not found in displayList');
+      _isScrolling = false;
+      return;
+    }
+
+    final hasPinnedHeader = menuProvider.categoryIds.isNotEmpty;
+    final pinnedAdjustment = hasPinnedHeader ? _categoryBarHeight : 0;
+
+    // 한 번만 시도: GlobalKey가 현재 렌더링되어 있으면 사용
+    try {
+      final key = _categoryKeys[categoryId];
+      if (key != null && key.currentContext != null) {
+        final renderBox = key.currentContext!.findRenderObject() as RenderBox?;
+        if (renderBox != null) {
+          final viewport = RenderAbstractViewport.of(renderBox);
+          final offsetToReveal = viewport.getOffsetToReveal(renderBox, 0);
+          final targetRenderOffset = offsetToReveal.offset;
+
+          debugPrint('[SCROLL] GlobalKey offset: raw=$targetRenderOffset');
+
+          final correctedTargetOffset = (targetRenderOffset - pinnedAdjustment)
+              .clamp(
+                _scrollController.position.minScrollExtent,
+                _scrollController.position.maxScrollExtent,
+              );
+
+          if (!mounted || !_scrollController.hasClients) return;
+
+          debugPrint(
+            '[SCROLL] Animating to rendered category $categoryId at offset $correctedTargetOffset (raw: $targetRenderOffset, adjust: $pinnedAdjustment)',
+          );
+          await _scrollController.animateTo(
+            correctedTargetOffset,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+          );
+
+          // Set the selected category immediately after animation completes
+          setState(() {
+            _selectedCategoryId = categoryId;
+          });
+
+          // Clear manual selection flag after animation completes
+          _manuallySelectedCategoryId = null;
+          _isScrolling = false;
+          debugPrint(
+            '[SCROLL] Animation completed, flag cleared for $categoryId, selected category updated',
+          );
+
+          debugPrint(
+            'Successfully scrolled to category $categoryId (rendered)',
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('GlobalKey lookup failed: $e');
+    }
+
+    // 즉시 estimated offset 사용 (재시도 안 함)
+    // 모든 이전 아이템의 높이를 합산
+    double estimatedOffset =
+        (_storeHeaderHeight ?? _defaultStoreHeaderHeight) + pinnedAdjustment;
+
+    for (int i = 0; i < targetIndex; i++) {
+      final item = displayList[i];
+      if (item is Map<String, dynamic>) {
+        // 카테고리 헤더: 렌더링되었으면 실제 높이, 아니면 추정값
+        final itemCategoryId = item['categoryId'] as String?;
+        final cachedHeight = _categoryHeights[itemCategoryId];
+        if (cachedHeight != null) {
+          estimatedOffset += cachedHeight;
+          continue;
+        }
+
+        final key = _categoryKeys[itemCategoryId];
+        if (key != null && key.currentContext != null) {
+          try {
+            final renderBox =
+                key.currentContext!.findRenderObject() as RenderBox?;
+            if (renderBox != null) {
+              estimatedOffset += renderBox.size.height;
+              continue;
+            }
+          } catch (_) {}
+        }
+        estimatedOffset += _defaultCategoryHeaderHeight;
+      } else if (item is Menu) {
+        final cachedHeight = _menuItemHeights[item.id];
+        if (cachedHeight != null) {
+          estimatedOffset += cachedHeight;
+        } else {
+          estimatedOffset += _defaultMenuItemHeight;
+        }
+      }
+    }
+
+    final correctedEstimatedOffset = (estimatedOffset - pinnedAdjustment).clamp(
+      _scrollController.position.minScrollExtent,
+      _scrollController.position.maxScrollExtent,
+    );
+
+    if (!mounted || !_scrollController.hasClients) return;
+
+    debugPrint(
+      '[SCROLL] Animating to estimated category $categoryId at offset $correctedEstimatedOffset (raw: $estimatedOffset, adjust: $pinnedAdjustment)',
+    );
     await _scrollController.animateTo(
-      adjusted,
-      duration: const Duration(milliseconds: 150),
+      correctedEstimatedOffset,
+      duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
     );
 
-    if (!mounted) return;
+    // Set the selected category immediately after animation completes
     setState(() {
-      _selectedCategory = category;
+      _selectedCategoryId = categoryId;
     });
+
+    // Clear manual selection flag after animation completes
+    _manuallySelectedCategoryId = null;
+    _isScrolling = false;
+    debugPrint(
+      '[SCROLL] Animation completed, flag cleared for $categoryId (estimated), selected category updated',
+    );
+
+    debugPrint(
+      'Successfully scrolled to category $categoryId (estimated offset: $estimatedOffset)',
+    );
   }
 
   void _handleScroll() {
     if (!_scrollController.hasClients || _categoryKeys.isEmpty) return;
 
-    final currentOffset = _scrollController.offset + _categoryBarHeight + 8;
-    String? candidate;
-    double candidateOffset = double.negativeInfinity;
+    // Skip auto-selection if user manually selected a category recently
+    // The flag will be cleared after the scroll animation completes
+    if (_manuallySelectedCategoryId != null) {
+      debugPrint(
+        '[SCROLL] Auto-selection skipped, manual selection flag is set: $_manuallySelectedCategoryId',
+      );
+      return;
+    }
 
-    for (final entry in _categoryKeys.entries) {
-      final ctx = entry.value.currentContext;
+    debugPrint(
+      '[SCROLL] Auto-selection executing at offset ${_scrollController.offset}',
+    );
+
+    final currentOffset = _scrollController.offset;
+    String? candidate;
+    double closestDistance = double.infinity;
+
+    // _categoryKeys는 순서를 보장하지 않으므로, categoryIds 순서로 검사
+    final menuProvider = context.read<MenuProvider>();
+    for (final categoryId in menuProvider.categoryIds) {
+      final ctx = _categoryKeys[categoryId]?.currentContext;
       if (ctx == null) continue;
+
       final renderBox = ctx.findRenderObject() as RenderBox?;
       if (renderBox == null) continue;
+
       final viewport = RenderAbstractViewport.of(renderBox);
-      final offset = viewport.getOffsetToReveal(renderBox, 0).offset - _categoryBarHeight;
-      if (currentOffset >= offset && offset >= candidateOffset) {
-        candidate = entry.key;
-        candidateOffset = offset;
+      final offset = viewport.getOffsetToReveal(renderBox, 0).offset;
+
+      debugPrint(
+        '[SCROLL] Category offset check: categoryId=$categoryId, revealOffset=$offset, currentOffset=$currentOffset',
+      );
+
+      // 현재 스크롤 위치에 가장 가까운 카테고리 선택 (위 또는 아래)
+      final distance = (offset - currentOffset).abs();
+      if (distance < closestDistance) {
+        candidate = categoryId;
+        closestDistance = distance;
+        debugPrint(
+          '[SCROLL] Better candidate: categoryId=$categoryId, distance=$distance',
+        );
       }
     }
 
-    candidate ??= _categoryKeys.keys.isNotEmpty ? _categoryKeys.keys.first : null;
+    // 위에 있는 카테고리가 없으면 (처음 스크롤하기 전) 첫 번째 카테고리 선택
+    // 단, 이미 다른 카테고리가 선택된 경우는 변경하지 않음
+    if (candidate == null && _selectedCategoryId == null) {
+      candidate = menuProvider.categoryIds.isNotEmpty
+          ? menuProvider.categoryIds.first
+          : null;
+    }
 
-    if (candidate != null && candidate != _selectedCategory) {
+    if (candidate != null && candidate != _selectedCategoryId) {
       setState(() {
-        _selectedCategory = candidate;
+        _selectedCategoryId = candidate;
       });
     }
   }
@@ -224,12 +407,16 @@ class _MenuScreenState extends State<MenuScreen> {
     final tableId = appState.tableId;
     final tableName = appState.tableName;
 
-    final shouldLoadMenus = !menuProvider.isLoading && menuProvider.menus.isEmpty;
+    // 한 번도 로드하지 않았으면 로드 시도
+    final shouldLoadMenus =
+        !menuProvider.hasAttemptedLoad && !menuProvider.isLoading;
 
-    if (shouldLoadMenus && effectiveStoreId != null && effectiveStoreId.isNotEmpty) {
+    if (shouldLoadMenus &&
+        effectiveStoreId != null &&
+        effectiveStoreId.isNotEmpty) {
       final provider = context.read<MenuProvider>();
       Future.microtask(() {
-        if (!provider.isLoading && provider.menus.isEmpty) {
+        if (!provider.hasAttemptedLoad && !provider.isLoading) {
           provider.loadMenus(effectiveStoreId);
         }
       });
@@ -237,7 +424,9 @@ class _MenuScreenState extends State<MenuScreen> {
 
     final currentStore = storeProvider.currentStore;
     final shouldLoadStore =
-        effectiveStoreId != null && effectiveStoreId.isNotEmpty && (currentStore == null || currentStore.id != effectiveStoreId);
+        effectiveStoreId != null &&
+        effectiveStoreId.isNotEmpty &&
+        (currentStore == null || currentStore.id != effectiveStoreId);
     if (shouldLoadStore && !storeProvider.isLoading) {
       final provider = context.read<StoreProvider>();
       Future.microtask(() {
@@ -248,7 +437,8 @@ class _MenuScreenState extends State<MenuScreen> {
     }
 
     final shouldLoadTableName =
-        (tableName == null || tableName.isEmpty) && (tableId != null && tableId.isNotEmpty);
+        (tableName == null || tableName.isEmpty) &&
+        (tableId != null && tableId.isNotEmpty);
     if (shouldLoadTableName) {
       final appStateProvider = context.read<AppStateProvider>();
       Future.microtask(() {
@@ -258,22 +448,34 @@ class _MenuScreenState extends State<MenuScreen> {
     }
 
     final displayList = menuProvider.displayList;
-    final categories = menuProvider.groupedMenus
-        .map((group) => group['category'])
-        .whereType<String>()
-        .where((c) => c.trim().isNotEmpty)
-        .toList(growable: false);
-    final hasCategories = categories.isNotEmpty;
-    _categoryKeys.removeWhere((key, _) => !categories.contains(key));
-    for (final category in categories) {
-      _categoryKeys.putIfAbsent(category, () => GlobalKey());
+    final categoryIds = menuProvider.categoryIds;
+    final Map<String?, String> categoryLabels = {};
+    for (final group in menuProvider.groupedMenus) {
+      final id = group['categoryId'] as String?;
+      final label = (group['category'] as String?)?.trim();
+      if (label != null && label.isNotEmpty) {
+        categoryLabels[id] = label;
+      }
+    }
+    if (menuProvider.hasUncategorizedMenus) {
+      categoryLabels[kUncategorizedCategoryId] = '기타';
+    }
+
+    final hasCategories = categoryIds.isNotEmpty;
+    _categoryKeys.removeWhere((key, _) => !categoryIds.contains(key));
+    _categoryHeights.removeWhere((key, _) => !categoryIds.contains(key));
+    final activeMenuIds = menuProvider.menus.map((menu) => menu.id).toSet();
+    _menuItemHeights.removeWhere((key, _) => !activeMenuIds.contains(key));
+    for (final categoryId in categoryIds) {
+      _categoryKeys.putIfAbsent(categoryId, () => GlobalKey());
     }
     if (hasCategories &&
-        (_selectedCategory == null || !categories.contains(_selectedCategory))) {
+        (_selectedCategoryId == null ||
+            !categoryIds.contains(_selectedCategoryId))) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         setState(() {
-          _selectedCategory = categories.first;
+          _selectedCategoryId = categoryIds.first;
         });
       });
     }
@@ -319,46 +521,17 @@ class _MenuScreenState extends State<MenuScreen> {
         ),
       ),
       body: SafeArea(
-        child: (menuProvider.isLoading && displayList.isEmpty)
-            ? const Center(child: CircularProgressIndicator())
-            : CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _buildStoreHeader(
-                      context,
-                      currentStore,
-                      tableName,
-                    ),
-                  ),
-                  if (hasCategories)
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _CategoryBarDelegate(
-                        height: _categoryBarHeight,
-                        child: _buildCategoryBar(categories),
-                      ),
-                    ),
-                  SliverPadding(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = displayList[index];
-
-                          if (item is String) {
-                            return _buildCategoryHeader(item);
-                          } else if (item is Menu) {
-                            return MenuItemCard(item: item);
-                          }
-                          return const SizedBox.shrink();
-                        },
-                        childCount: displayList.length,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        child: _buildBody(
+          context,
+          menuProvider,
+          storeProvider,
+          displayList,
+          hasCategories,
+          categoryIds,
+          currentStore,
+          tableName,
+          categoryLabels,
+        ),
       ),
 
       floatingActionButton: Consumer<CartProvider>(
@@ -405,213 +578,183 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  Widget _buildCategoryHeader(String title) {
-    return Container(
-      key: _categoryKeys[title],
-      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 10.0),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildStoreHeader(
+  /// 페이지 본문 빌더 - 에러 상태와 정상 상태를 분기하여 표시
+  Widget _buildBody(
     BuildContext context,
-    Store? store,
+    MenuProvider menuProvider,
+    StoreProvider storeProvider,
+    List<dynamic> displayList,
+    bool hasCategories,
+    List<String?> categoryIds,
+    Store? currentStore,
     String? tableName,
+    Map<String?, String> categoryLabels,
   ) {
-    final storeName = store?.name ?? '가게 정보를 불러오는 중입니다';
-    final tableText = (tableName == null || tableName.isEmpty)
-        ? '테이블 정보 없음'
-        : tableName;
-    final notice = (store?.notice ?? '').trim();
-    final hasNotice = notice.isNotEmpty;
-    final isExpanded = _noticeExpanded;
-    final availableWidth = MediaQuery.of(context).size.width - 32; // margin
-    final tableMaxWidth = availableWidth * 0.4;
+    // 로딩 중이고 데이터가 없으면 로딩 표시
+    if (menuProvider.isLoading && displayList.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 6,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      storeName,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '멤버도 QR 찍고 함께 주문해요',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                flex: 4,
-                fit: FlexFit.loose,
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: tableMaxWidth),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF6F8FC),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.event_seat_outlined,
-                            size: 18,
-                            color: Color(0xFF4A5161),
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              tableText,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.right,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (hasNotice) ...[
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
+    // storeId가 없으면 오류 표시
+    if (menuProvider.error != null || storeProvider.error != null) {
+      final errorMessage =
+          menuProvider.error ?? storeProvider.error ?? '알 수 없는 오류가 발생했습니다.';
+      return _buildErrorPage(errorMessage);
+    }
+
+    // 가게 정보가 로드되지 않았으면 오류 표시
+    if (currentStore == null && !storeProvider.isLoading) {
+      return _buildErrorPage('가게 정보를 찾을 수 없습니다. 관리자에게 문의해주세요.');
+    }
+
+    // 메뉴가 없으면 안내 메시지와 함께 가게 정보만 표시
+    if (displayList.isEmpty && !menuProvider.isLoading) {
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: StoreInfoHeader(
+              store: currentStore,
+              tableName: tableName,
+              isNoticeExpanded: _noticeExpanded,
+              onToggleNotice: () {
                 setState(() {
                   _noticeExpanded = !_noticeExpanded;
                 });
               },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEEF4FF),
-                  borderRadius: BorderRadius.circular(12),
+              onHeight: (height) {
+                _storeHeaderHeight = height;
+              },
+            ),
+          ),
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.restaurant_menu, size: 48, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  '현재 준비 중인 메뉴가 없습니다',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.campaign_outlined,
-                      color: Color(0xFF3B66F5),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        notice,
-                        maxLines: isExpanded ? null : 2,
-                        overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 28,
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: Icon(
-                          isExpanded
-                              ? Icons.keyboard_arrow_up_rounded
-                              : Icons.keyboard_arrow_down_rounded,
-                          color: const Color(0xFF3B66F5),
-                        ),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                Text(
+                  '잠시 후 다시 확인해주세요',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                 ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 정상 상태: 메뉴와 함께 표시
+    return CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        SliverToBoxAdapter(
+          child: StoreInfoHeader(
+            store: currentStore,
+            tableName: tableName,
+            isNoticeExpanded: _noticeExpanded,
+            onToggleNotice: () {
+              setState(() {
+                _noticeExpanded = !_noticeExpanded;
+              });
+            },
+            onHeight: (height) {
+              _storeHeaderHeight = height;
+            },
+          ),
+        ),
+        if (hasCategories)
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _CategoryBarDelegate(
+              height: _categoryBarHeight,
+              child: MenuCategoryBar(
+                categoryIds: categoryIds,
+                selectedCategoryId: _selectedCategoryId,
+                categoryLabels: categoryLabels,
+                onCategoryTap: _scrollToCategoryId,
               ),
             ),
-          ],
-        ],
-      ),
+          ),
+        SliverPadding(
+          padding: const EdgeInsets.only(bottom: 24),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final item = displayList[index];
+
+              if (item is Map<String, dynamic>) {
+                final categoryId = item['categoryId'] as String?;
+                final categoryName = item['name'] as String? ?? '기타';
+                final headerKey = _categoryKeys.putIfAbsent(
+                  categoryId,
+                  () => GlobalKey(),
+                );
+
+                return MenuCategoryHeader(
+                  headerKey: headerKey,
+                  title: categoryName,
+                  onHeight: (height) {
+                    _categoryHeights[categoryId] = height;
+                  },
+                );
+              }
+
+              if (item is Menu) {
+                return MeasuredSize(
+                  key: ValueKey('menu-${item.id}'),
+                  onHeight: (height) {
+                    _menuItemHeights[item.id] = height;
+                  },
+                  child: MenuItemCard(item: item),
+                );
+              }
+              return const SizedBox.shrink();
+            }, childCount: displayList.length),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildCategoryBar(List<String> categories) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: SizedBox(
-        height: 44,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: categories.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final text = categories[index];
-            final isSelected = text == _selectedCategory;
-            return GestureDetector(
-              onTap: () => _scrollToCategory(text),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFDCE6FF) : const Color(0xFFF5F7FB),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: isSelected ? const Color(0xFF3B66F5) : Colors.transparent,
-                  ),
-                ),
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+  /// 오류 페이지 표시
+  Widget _buildErrorPage(String errorMessage) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
+          const SizedBox(height: 16),
+          Text(
+            '오류가 발생했습니다',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Text(
+              errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              context.read<MenuProvider>().clearError();
+              context.read<StoreProvider>().clearError();
+            },
+            child: const Text('다시 시도'),
+          ),
+        ],
       ),
     );
   }
@@ -621,10 +764,7 @@ class _CategoryBarDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
   final double height;
 
-  _CategoryBarDelegate({
-    required this.child,
-    this.height = 60,
-  });
+  _CategoryBarDelegate({required this.child, this.height = 60});
 
   @override
   double get minExtent => height;
@@ -633,7 +773,11 @@ class _CategoryBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -643,7 +787,7 @@ class _CategoryBarDelegate extends SliverPersistentHeaderDelegate {
                   color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
-                )
+                ),
               ]
             : null,
       ),

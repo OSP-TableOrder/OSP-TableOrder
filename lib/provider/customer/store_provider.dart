@@ -8,10 +8,12 @@ class StoreProvider with ChangeNotifier {
   List<Store> _stores = [];
   Store? _currentStore;
   bool _isLoading = false;
+  String? _error;
 
   List<Store> get stores => _stores;
   Store? get currentStore => _currentStore;
   bool get isLoading => _isLoading;
+  String? get error => _error;
 
   /// 모든 Store 조회
   Future<void> loadStores() async {
@@ -38,11 +40,26 @@ class StoreProvider with ChangeNotifier {
   /// Store ID로 조회
   Future<void> loadStoreById(String storeId) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
-    _currentStore = await _service.getStore(storeId);
+    try {
+      _currentStore = await _service.getStore(storeId);
+      if (_currentStore == null) {
+        _error = '가게 정보를 찾을 수 없습니다.';
+      }
+    } catch (e) {
+      _error = 'Failed to load store: $e';
+      _currentStore = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
-    _isLoading = false;
+  /// 에러 상태 초기화
+  void clearError() {
+    _error = null;
     notifyListeners();
   }
 }

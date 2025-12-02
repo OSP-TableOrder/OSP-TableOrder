@@ -52,9 +52,18 @@ class _ProductAddModalState extends State<ProductAddModal> {
   }
 
   Future<void> _submitProduct() async {
-    if (selectedCategoryId == null) {
+    // 상품명 필수 검증
+    if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('카테고리를 선택해주세요.')),
+        const SnackBar(content: Text('상품명을 입력해주세요.')),
+      );
+      return;
+    }
+
+    // 가격 필수 검증
+    if (priceController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('가격을 입력해주세요.')),
       );
       return;
     }
@@ -74,11 +83,11 @@ class _ProductAddModalState extends State<ProductAddModal> {
         );
       }
 
-      // Product 생성
+      // Product 생성 (카테고리는 선택사항)
       final newProduct = Product(
         id: '', // ID는 Firestore에서 자동 생성됨
         storeId: storeId,
-        categoryId: selectedCategoryId!,
+        categoryId: selectedCategoryId ?? '', // 카테고리가 없으면 빈 문자열
         name: nameController.text.trim(),
         price: priceController.text.trim(),
         stock: stock,
@@ -123,15 +132,25 @@ class _ProductAddModalState extends State<ProductAddModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String?>(
               initialValue: selectedCategoryId,
-              items: categories
-                  .map(
-                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
-                  )
-                  .toList(),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('카테고리 없음'),
+                ),
+                ...categories.map(
+                  (c) => DropdownMenuItem<String?>(
+                    value: c.id,
+                    child: Text(c.name),
+                  ),
+                ),
+              ],
               onChanged: (v) => setState(() => selectedCategoryId = v),
-              decoration: const InputDecoration(labelText: "카테고리"),
+              decoration: const InputDecoration(
+                labelText: "카테고리 (선택사항)",
+                helperText: "선택하지 않으면 카테고리 없이 추가됩니다",
+              ),
             ),
 
               const SizedBox(height: 16),

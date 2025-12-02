@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_order/provider/admin/login_provider.dart';
-import 'package:table_order/provider/admin/table_order_provider.dart';
+import 'package:table_order/provider/admin/order_provider.dart';
 import 'package:table_order/widgets/admin/order/receipt_modal.dart';
 import 'package:table_order/widgets/admin/table/table_card_item.dart';
 
@@ -28,7 +28,7 @@ class _TableManagementAreaState extends State<TableManagementArea> {
       final storeId = context.read<LoginProvider>().storeId;
       if (storeId != null) {
         await context
-            .read<TableOrderProvider>()
+            .read<OrderProvider>()
             .loadTables(storeId.toString());
       }
     } catch (e) {
@@ -42,7 +42,7 @@ class _TableManagementAreaState extends State<TableManagementArea> {
 
   @override
   Widget build(BuildContext context) {
-    final tables = context.watch<TableOrderProvider>().tables;
+    final tables = context.watch<OrderProvider>().tables;
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -59,13 +59,10 @@ class _TableManagementAreaState extends State<TableManagementArea> {
               key: ValueKey("table_index_$i"),
               table: tables[i],
               onTap: () async {
-                final provider = context.read<TableOrderProvider>();
+                final provider = context.read<OrderProvider>();
                 final storeId =
                     context.read<LoginProvider>().storeId?.toString();
 
-                if (tables[i].hasNewOrder) {
-                  provider.checkNewOrder(i);
-                }
                 if (tables[i].hasCallRequest && storeId != null) {
                   await provider.checkCallRequest(i, storeId);
                   if (!context.mounted) {

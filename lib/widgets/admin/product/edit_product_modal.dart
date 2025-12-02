@@ -28,7 +28,7 @@ class _ProductEditModalState extends State<ProductEditModal> {
   late int stock;
   late bool isSoldOut;
   late bool isActive;
-  late String selectedCategoryId;
+  late String? selectedCategoryId;
 
   File? selectedImage;
   bool isUploading = false;
@@ -92,7 +92,7 @@ class _ProductEditModalState extends State<ProductEditModal> {
       final updatedProduct = Product(
         id: widget.product.id,
         storeId: widget.product.storeId,
-        categoryId: selectedCategoryId,
+        categoryId: selectedCategoryId ?? '',
         name: nameController.text.trim(),
         price: priceController.text.trim(),
         stock: stock,
@@ -137,33 +137,39 @@ class _ProductEditModalState extends State<ProductEditModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            DropdownButtonFormField<String>(
-              initialValue: selectedCategoryId,
-              items: categoryProvider.categories
-                  .map(
-                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => selectedCategoryId = v!),
-              decoration: InputDecoration(
-                labelText: "카테고리",
-                labelStyle: labelStyle,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            // 이미지 선택
-            GestureDetector(
-              onTap: isUploading ? null : _pickImage,
-              child: Container(
-                height: 120,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
+              DropdownButtonFormField<String?>(
+                initialValue: selectedCategoryId,
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('카테고리 없음'),
+                  ),
+                  ...categoryProvider.categories
+                      .map(
+                        (c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name)),
+                      ),
+                ],
+                onChanged: (v) => setState(() => selectedCategoryId = v),
+                decoration: InputDecoration(
+                  labelText: "카테고리 (선택사항)",
+                  helperText: "선택하지 않으면 카테고리 없이 수정됩니다",
+                  labelStyle: labelStyle,
                 ),
-                child: selectedImage == null
+              ),
+
+              const SizedBox(height: 16),
+              // 이미지 선택
+              GestureDetector(
+                onTap: isUploading ? null : _pickImage,
+                child: Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[100],
+                  ),
+                  child: selectedImage == null
                     ? (widget.product.imageUrl != null
                         ? Image.network(
                             widget.product.imageUrl!,
@@ -237,30 +243,30 @@ class _ProductEditModalState extends State<ProductEditModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text("재고 수량", style: labelStyle),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: () {
-                        setState(() {
-                          if (stock > 0) stock--;
-                        });
-                      },
-                    ),
-                    Text(
-                      "$stock",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        onPressed: () {
+                          setState(() {
+                            if (stock > 0) stock--;
+                          });
+                        },
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: () => setState(() => stock++),
-                    ),
-                  ],
-                ),
-              ],
+                      Text(
+                        "$stock",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        onPressed: () => setState(() => stock++),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Row(
@@ -269,13 +275,12 @@ class _ProductEditModalState extends State<ProductEditModal> {
                   Text("품절 여부", style: labelStyle),
                   Switch(
                     value: isSoldOut,
-                  onChanged: (v) => setState(() => isSoldOut = v),
-
-                  activeTrackColor: const Color(0xff2d7ff9),
-                  inactiveThumbColor: Colors.grey,
-                  inactiveTrackColor: Colors.black26,
-                ),
-              ],
+                    onChanged: (v) => setState(() => isSoldOut = v),
+                    activeTrackColor: const Color(0xff2d7ff9),
+                    inactiveThumbColor: Colors.grey,
+                    inactiveTrackColor: Colors.black26,
+                  ),
+                ],
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -283,13 +288,12 @@ class _ProductEditModalState extends State<ProductEditModal> {
                   Text("노출 여부", style: labelStyle),
                   Switch(
                     value: isActive,
-                  onChanged: (v) => setState(() => isActive = v),
-
-                  activeTrackColor: const Color(0xff2d7ff9),
-                  inactiveThumbColor: Colors.grey,
-                  inactiveTrackColor: Colors.black26,
-                ),
-              ],
+                    onChanged: (v) => setState(() => isActive = v),
+                    activeTrackColor: const Color(0xff2d7ff9),
+                    inactiveThumbColor: Colors.grey,
+                    inactiveTrackColor: Colors.black26,
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               TextField(

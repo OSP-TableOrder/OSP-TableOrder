@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:table_order/provider/admin/table_order_provider.dart';
+import 'package:table_order/provider/admin/order_provider.dart';
 import 'package:table_order/provider/app_state_provider.dart';
 import 'package:table_order/widgets/admin/content_area/category_area.dart';
 import 'package:table_order/widgets/admin/content_area/product_area.dart';
@@ -28,14 +28,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final appState = context.read<AppStateProvider>();
-      final tableOrderProvider = context.read<TableOrderProvider>();
+      final orderProvider = context.read<OrderProvider>();
 
       if (appState.storeId != null) {
         developer.log(
           'Loading orders for storeId=${appState.storeId}',
           name: 'AdminHomeScreen',
         );
-        await tableOrderProvider.loadTables(appState.storeId!);
+        await orderProvider.loadTables(appState.storeId!);
       }
     });
   }
@@ -74,7 +74,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           children: [
             SizedBox(
               height: 56,
-              child: Consumer<TableOrderProvider>(
+              child: Consumer<OrderProvider>(
                 builder: (_, __, ___) {
                   return AdminHeaderBar(
                     onMenuPressed: () {
