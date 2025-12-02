@@ -7,8 +7,9 @@ import 'package:table_order/server/admin_server/menu_repository.dart';
 /// Receipts 컬렉션의 CRUD 및 Firestore 데이터 접근을 담당하는 계층
 ///
 /// 구조:
-/// - 비정규화: Receipt.menus[] (OrderMenu 직접 포함)
-/// - 정규화: Receipt.orders[] (Order ID 참조) - 마이그레이션 이후
+/// - 정규화됨: Orders 컬렉션이 유일한 주문 데이터 소스
+/// - Receipts: 최소 정보 유지 (orderId, totalPrice, status)
+/// - 메뉴 정보: Orders.items[].menuId 참조로 조회
 class ReceiptRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final MenuRepository _menuRepository = MenuRepository();
@@ -440,11 +441,20 @@ class ReceiptRepository {
   }
 
   /// Receipt 문서에서 메뉴 항목을 추출하여 표시용 형식으로 변환
-  /// 메뉴는 Receipt.menus 배열에 직접 포함되어 있음
+  ///
+  /// 주의: Receipts.menus[]는 이제 비어있음 (Orders 컬렉션으로 완전 이동)
+  /// 이 메서드는 레거시 지원을 위해 유지되지만,
+  /// 실제로는 _extractMenusFromOrders()가 사용됨
   List<dynamic> _extractMenusFromReceipt(Map<String, dynamic> receiptData) {
     final menus = receiptData['menus'] as List<dynamic>? ?? [];
-    final items = <dynamic>[];
 
+    // Receipts.menus[]가 비어있으면 빈 배열 반환
+    if (menus.isEmpty) {
+      return [];
+    }
+
+    // 레거시: 이전 데이터 지원
+    final items = <dynamic>[];
     for (final menu in menus) {
       if (menu is Map<String, dynamic>) {
         final menuInfo = menu['menu'] as Map<String, dynamic>? ?? {};
