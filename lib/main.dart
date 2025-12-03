@@ -68,11 +68,40 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSub;
+  String? _initialRoute;
+  Map<String, dynamic>? _initialArguments;
 
   @override
   void initState() {
     super.initState();
     _initDeepLink();
+    _checkInitialUrl();
+  }
+
+  // 초기 URL의 쿼리 파라미터 확인
+  void _checkInitialUrl() {
+    try {
+      final uri = Uri.base;
+      debugPrint("Initial URL: $uri");
+
+      final storeId = uri.queryParameters['storeId'];
+      final tableId = uri.queryParameters['tableId'];
+
+      if (storeId != null && tableId != null) {
+        _initialRoute = AppRoutes.menuList;
+        _initialArguments = {'storeId': storeId, 'tableId': tableId};
+
+        // AppStateProvider에 저장
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          navigatorKey.currentContext?.read<AppStateProvider>().setStoreAndTable(
+            storeId: storeId,
+            tableId: tableId,
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint("Error checking initial URL: $e");
+    }
   }
 
   Future<void> _initDeepLink() async {
@@ -118,6 +147,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    // 초기 라우트 결정: 쿼리 파라미터가 있으면 menuList, 없으면 roleSelection
+    final initialRoute = _initialRoute ?? AppRoutes.roleSelection;
+
     return MaterialApp(
       title: 'Table Order',
       debugShowCheckedModeBanner: false,
@@ -125,8 +157,19 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       navigatorKey: navigatorKey,
-      onGenerateRoute: AppRoutes.onGenerateRoute,
-      initialRoute: AppRoutes.roleSelection,
+      onGenerateRoute: (settings) {
+        // 초기 라우트일 때 arguments 전달
+        if (settings.name == AppRoutes.menuList && _initialArguments != null) {
+          return AppRoutes.onGenerateRoute(
+            RouteSettings(
+              name: settings.name,
+              arguments: _initialArguments,
+            ),
+          );
+        }
+        return AppRoutes.onGenerateRoute(settings);
+      },
+      initialRoute: initialRoute,
     );
   }
 }
