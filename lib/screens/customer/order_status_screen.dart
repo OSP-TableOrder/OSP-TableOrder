@@ -24,9 +24,9 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('주문 내역을 불러오고 있습니다...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('주문 내역을 불러오고 있습니다...')));
 
       final viewModel = context.read<OrderStatusViewModel>();
       await viewModel.loadInitial(receiptId: widget.receiptId);
@@ -69,6 +69,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
   Widget build(BuildContext context) {
     // Provider에서 viewModel 가져오기
     final viewModel = context.watch<OrderStatusViewModel>();
+    final bool isSettled = viewModel.order.status.isPaid;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -87,6 +88,10 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                 builder: (context) {
                   if (viewModel.loading) {
                     return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (isSettled) {
+                    return _buildThankYouView(context);
                   }
 
                   final order = viewModel.order;
@@ -125,25 +130,32 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                                   itemBuilder: (context, idx) {
                                     final OrderMenu menu = menus[idx];
                                     return Padding(
-                                      padding: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12,
+                                      ),
                                       child: OrderMenuCard(
                                         orderMenu: menu,
                                         onTapDelete: menu.isCancelable
                                             ? () async {
-                                                final ok = await showConfirmModal(
-                                                  context,
-                                                  title: '주문 메뉴 취소',
-                                                  description: '해당 메뉴를 취소하시겠습니까?',
-                                                  cancelText: '취소',
-                                                  actionText: '확인',
-                                                  onActionAsync: () async {
-                                                    await viewModel.cancelMenu(
-                                                      menu.id,
+                                                final ok =
+                                                    await showConfirmModal(
+                                                      context,
+                                                      title: '주문 메뉴 취소',
+                                                      description:
+                                                          '해당 메뉴를 취소하시겠습니까?',
+                                                      cancelText: '취소',
+                                                      actionText: '확인',
+                                                      onActionAsync: () async {
+                                                        await viewModel
+                                                            .cancelMenu(
+                                                              menu.id,
+                                                            );
+                                                      },
                                                     );
-                                                  },
-                                                );
                                                 if (ok == true) {
-                                                  _toast('주문 메뉴가 성공적으로 취소되었습니다.');
+                                                  _toast(
+                                                    '주문 메뉴가 성공적으로 취소되었습니다.',
+                                                  );
                                                 }
                                               }
                                             : null,
@@ -159,37 +171,85 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               ),
             ),
             // 총 가격 섹션 - body 내 하단
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '총 가격',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Consumer<OrderStatusViewModel>(
-                        builder: (context, viewModel, _) {
-                          return Text(
-                            formatWon(viewModel.totalPrice),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          );
-                        },
+            if (!isSettled)
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '총 가격',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
                       ),
-                      const SizedBox(width: 6),
-                      const Text('원', style: TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                ],
+                    ),
+                    Row(
+                      children: [
+                        Consumer<OrderStatusViewModel>(
+                          builder: (context, viewModel, _) {
+                            return Text(
+                              formatWon(viewModel.totalPrice),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        const Text('원', style: TextStyle(fontSize: 16)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThankYouView(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.check_circle_outline,
+              color: Colors.green,
+              size: 80,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '맛있게 즐기셨나요?',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '영수증 정산이 완료되었어요!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                '닫기',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ],

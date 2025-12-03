@@ -1,6 +1,8 @@
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:table_order/models/admin/receipt_status.dart';
 import 'package:table_order/models/admin/table_order_info.dart';
+import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/server/admin_server/menu_repository.dart';
 
 /// 영수증(Receipt) 도메인 Repository
@@ -28,7 +30,7 @@ class ReceiptRepository {
       // Receipts 컬렉션에서 status가 'unpaid'인 영수증 조회
       final receiptsSnapshot = await _firestore
           .collection(_receiptsCollection)
-          .where('status', isEqualTo: 'unpaid')
+          .where('status', isEqualTo: ReceiptStatus.unpaid.value)
           .where('storeId', isEqualTo: storeId)
           .orderBy('createdAt', descending: true)
           .get();
@@ -67,25 +69,59 @@ class ReceiptRepository {
 
         final tableName = tableMap[tableId] ?? tableId;
         final ordersMetadata = receiptOrdersList[i];
-        final orders = ordersMetadata['items'] as List<dynamic>;
+        final orderEntries = (ordersMetadata['orders'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .toList();
 
-        // TableOrder 생성
-        final tableOrder = TableOrder(
-          orderId: receiptDoc.id,
-          tableId: tableId,
-          tableName: tableName,
-          items: orders,
-          orderTime: _formatTime(data['createdAt'] as Timestamp?),
-          totalPrice: (data['totalPrice'] as int?) ?? 0,
-          hasNewOrder: orders.any((item) => (item['status'] as String?)?.contains('ordered') ?? false),
-          orderStatus: orders.isNotEmpty ? OrderStatus.ordered : OrderStatus.empty,
-        );
+        orderEntries.sort((a, b) {
+          final aTs = a['createdAt'] as Timestamp?;
+          final bTs = b['createdAt'] as Timestamp?;
+          final aMillis = aTs?.millisecondsSinceEpoch ?? 0;
+          final bMillis = bTs?.millisecondsSinceEpoch ?? 0;
+          return bMillis.compareTo(aMillis);
+        });
 
-        // 테이블별 영수증 리스트에 추가
-        if (!tableReceiptsMap.containsKey(tableId)) {
-          tableReceiptsMap[tableId] = [];
+        if (orderEntries.isEmpty) {
+          orderEntries.add({
+            'orderId': null,
+            'items': <dynamic>[],
+            'createdAt': data['createdAt'],
+            'totalPrice': (data['totalPrice'] as int?) ?? 0,
+          });
         }
-        tableReceiptsMap[tableId]!.add(tableOrder);
+
+        for (final entry in orderEntries) {
+          final items = (entry['items'] as List<dynamic>? ?? []);
+          final actualOrderId = entry['orderId'] as String?;
+          final createdAt = entry['createdAt'] as Timestamp? ??
+              data['createdAt'] as Timestamp?;
+          final orderTotalPrice = entry['totalPrice'] as int? ??
+              _calculateTotalFromItems(items);
+
+          final hasNewItem = items.any((item) {
+            if (item is! Map<String, dynamic>) return false;
+            final status = (item['status'] as String? ?? '').toUpperCase();
+            return status == 'ORDERED';
+          });
+
+          final tableOrder = TableOrder(
+            orderId: receiptDoc.id,
+            actualOrderId: actualOrderId,
+            tableId: tableId,
+            tableName: tableName,
+            items: items,
+            orderTime: _formatTime(createdAt),
+            totalPrice: orderTotalPrice,
+            hasNewOrder: hasNewItem,
+            orderStatus:
+                hasNewItem ? OrderStatus.ordered : OrderStatus.empty,
+          );
+
+          if (!tableReceiptsMap.containsKey(tableId)) {
+            tableReceiptsMap[tableId] = [];
+          }
+          tableReceiptsMap[tableId]!.add(tableOrder);
+        }
       }
 
       // TableOrderInfo 리스트 생성
@@ -178,7 +214,7 @@ class ReceiptRepository {
       await receiptRef.set({
         'storeId': storeId,
         'tableId': tableId,
-        'status': 'unpaid',
+        'status': ReceiptStatus.unpaid.value,
         'totalPrice': totalPrice,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -337,6 +373,34 @@ class ReceiptRepository {
     }
   }
 
+  /// Receipt에 속한 모든 Order의 메뉴 항목 조회 (메뉴 정보 포함)
+  /// UI에서 표시할 수 있는 형식으로 반환
+  ///
+  /// 반환 값: `{'orders': List<Map<String, dynamic>>, 'receiptId': String}`
+  /// - orders: 각 Order 문서를 나타내는 {orderId, items, createdAt, totalPrice}
+  /// - receiptId: 영수증 ID
+  Future<Map<String, dynamic>> getOrdersByReceiptId(String receiptId) async {
+    try {
+      final doc = await _firestore
+          .collection(_receiptsCollection)
+          .doc(receiptId)
+          .get();
+
+      if (!doc.exists) {
+        developer.log('Receipt $receiptId not found', name: 'ReceiptRepository');
+        return {'orders': <Map<String, dynamic>>[], 'receiptId': receiptId};
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      final metadata = await _fetchOrdersByReceiptWithMetadata(receiptId, data);
+
+      return metadata;
+    } catch (e) {
+      developer.log('Error fetching orders by receipt: $e', name: 'ReceiptRepository');
+      return {'orders': <Map<String, dynamic>>[], 'receiptId': receiptId};
+    }
+  }
+
   /// Receipt에 orders 배열이 있는지 확인 (정규화 상태 확인)
   Future<bool> hasOrdersArray(String receiptId) async {
     try {
@@ -355,48 +419,98 @@ class ReceiptRepository {
     }
   }
 
-  /// Receipt의 menus 배열에 메뉴 추가
+  /// 메뉴를 Receipt의 최신 Order에 추가
+  /// Orders 컬렉션의 메뉴 항목에 직접 추가
   Future<bool> addMenuToReceipt({
     required String receiptId,
     required Map<String, dynamic> menuData,
   }) async {
     try {
-      final docRef = _firestore.collection(_receiptsCollection).doc(receiptId);
-      final doc = await docRef.get();
+      final receiptRef = _firestore.collection(_receiptsCollection).doc(receiptId);
+      final receiptDoc = await receiptRef.get();
 
-      if (!doc.exists) {
+      if (!receiptDoc.exists) {
         developer.log('Receipt $receiptId not found', name: 'ReceiptRepository');
         return false;
       }
 
-      final data = doc.data() as Map<String, dynamic>;
-      final menus = List<Map<String, dynamic>>.from(
-        (data['menus'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
+      final receiptData = receiptDoc.data() as Map<String, dynamic>;
+
+      // Receipt의 orders 배열에서 최신 Order ID 가져오기
+      final orderIds = (receiptData['orders'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (orderIds.isEmpty) {
+        developer.log(
+          'No orders found in receipt $receiptId',
+          name: 'ReceiptRepository',
+        );
+        return false;
+      }
+
+      // 최신 Order는 배열의 마지막 요소
+      final latestOrderId = orderIds.last;
+
+      // Orders 컬렉션에서 해당 Order 문서 가져오기
+      final orderRef = _firestore.collection(_ordersCollection).doc(latestOrderId);
+      final orderDoc = await orderRef.get();
+
+      if (!orderDoc.exists) {
+        developer.log(
+          'Order $latestOrderId not found in Orders collection',
+          name: 'ReceiptRepository',
+        );
+        return false;
+      }
+
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final items = List<Map<String, dynamic>>.from(
+        (orderData['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
       );
 
-      // 새 메뉴 항목 추가
-      final newMenu = {
-        ...menuData,
+      // 새 메뉴 항목 생성
+      final newMenuItem = {
+        'menuId': menuData['id'] ?? '',
+        'quantity': menuData['quantity'] ?? 1,
+        'status': 'ORDERED',
+        'completedCount': 0,
         'orderedAt': Timestamp.fromDate(DateTime.now()),
-        'status': menuData['status'] ?? 'ordered',
+        'priceAtOrder': menuData['price'] ?? 0,
       };
 
-      menus.add(newMenu);
+      items.add(newMenuItem);
 
-      // totalPrice 업데이트
-      int totalPrice = (data['totalPrice'] as int?) ?? 0;
+      // totalPrice 재계산
+      int newTotalPrice = 0;
+      for (final item in items) {
+        final status = (item['status'] as String?)?.toUpperCase() ?? '';
+        if (status != 'CANCELED') {
+          newTotalPrice += ((item['priceAtOrder'] as int?) ?? 0) *
+              ((item['quantity'] as int?) ?? 1);
+        }
+      }
+
+      // Orders 컬렉션의 해당 Order 업데이트
+      await orderRef.update({
+        'items': items,
+        'totalPrice': newTotalPrice,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Receipt의 totalPrice도 업데이트
       final quantity = (menuData['quantity'] as int?) ?? 1;
       final price = (menuData['price'] as int?) ?? 0;
-      totalPrice += (price * quantity);
+      final receiptTotalPrice = ((receiptData['totalPrice'] as int?) ?? 0) + (price * quantity);
 
-      await docRef.update({
-        'menus': menus,
-        'totalPrice': totalPrice,
+      await receiptRef.update({
+        'totalPrice': receiptTotalPrice,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
       developer.log(
-        'Added menu to receipt: receiptId=$receiptId, menuName=${menuData['name']}',
+        'Added menu to order: receiptId=$receiptId, orderId=$latestOrderId, menuName=${menuData['name']}',
         name: 'ReceiptRepository',
       );
 
@@ -420,23 +534,61 @@ class ReceiptRepository {
     Map<String, dynamic> receiptData,
   ) async {
     try {
-      // 우선 Receipts.menus[]에서 메뉴 추출 시도
-      final menus = receiptData['menus'] as List<dynamic>? ?? [];
-      if (menus.isNotEmpty) {
-        final items = _extractMenusFromReceipt(receiptData);
-        return {'items': items, 'receiptId': receiptId};
+      final orderEntries = <Map<String, dynamic>>[];
+
+      // 1. Receipts.orders[] 배열이 있으면 각 Order 문서를 개별 주문으로 처리
+      final orderIds = (receiptData['orders'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (orderIds.isNotEmpty) {
+        for (final orderId in orderIds) {
+          final entry = await _buildOrderEntry(orderId);
+          if (entry != null) {
+            orderEntries.add(entry);
+          }
+        }
       }
 
-      // Receipts.menus[]가 없으면 Orders 컬렉션에서 추출
-      final orderId = receiptData['orderId'] as String?;
-      final items = await _extractMenusFromOrders(receiptId, orderId);
-      return {'items': items, 'receiptId': receiptId};
+      // 2. 단일 orderId 필드를 사용 (레거시)
+      if (orderEntries.isEmpty) {
+        final singleOrderId = receiptData['orderId'] as String?;
+        if (singleOrderId != null && singleOrderId.isNotEmpty) {
+          final entry = await _buildOrderEntry(singleOrderId);
+          if (entry != null) {
+            orderEntries.add(entry);
+          }
+        }
+      }
+
+      // 3. Legacy Receipts.menus[]에서 직접 추출
+      if (orderEntries.isEmpty) {
+        final legacyItems = _extractMenusFromReceipt(receiptData);
+        if (legacyItems.isNotEmpty) {
+          orderEntries.add({
+            'orderId': receiptId,
+            'items': legacyItems,
+            'createdAt': receiptData['createdAt'],
+            'totalPrice': (receiptData['totalPrice'] as int?) ??
+                _calculateTotalFromItems(legacyItems),
+          });
+        }
+      }
+
+      return {
+        'receiptId': receiptId,
+        'orders': orderEntries,
+      };
     } catch (e) {
       developer.log(
-        'Error extracting menus from receipt $receiptId: $e',
+        'Error extracting orders from receipt $receiptId: $e',
         name: 'ReceiptRepository',
       );
-      return {'items': <dynamic>[], 'receiptId': receiptId};
+      return {
+        'receiptId': receiptId,
+        'orders': <Map<String, dynamic>>[],
+      };
     }
   }
 
@@ -483,98 +635,96 @@ class ReceiptRepository {
     return items;
   }
 
-  /// Receipt의 Orders 컬렉션 데이터로부터 메뉴 항목 추출
-  /// Orders 컬렉션의 정규화된 구조(menuId 참조)를 UI 표시 형식으로 변환
-  ///
-  /// 주의: 이 메서드는 Orders 데이터가 있을 때만 사용
-  /// Receipts.menus[]가 비어있으면 이 메서드를 사용해야 함
-  Future<List<dynamic>> _extractMenusFromOrders(
-    String receiptId,
-    String? orderId,
-  ) async {
-    if (orderId == null || orderId.isEmpty) {
-      return [];
-    }
+  Future<Map<String, dynamic>?> _buildOrderEntry(String orderId) async {
+    if (orderId.isEmpty) return null;
 
     try {
-      // Orders 컬렉션에서 Order 조회
-      final orderDoc = await _firestore
-          .collection(_ordersCollection)
-          .doc(orderId)
-          .get();
-
+      final orderDoc =
+          await _firestore.collection(_ordersCollection).doc(orderId).get();
       if (!orderDoc.exists) {
-        return [];
+        return null;
       }
 
-      final orderData = orderDoc.data() as Map<String, dynamic>;
-      final items = orderData['items'] as List<dynamic>? ?? [];
+      final data = orderDoc.data() as Map<String, dynamic>;
+      final items = data['items'] as List<dynamic>? ?? [];
+      final displayItems = await _mapOrderItemsWithMenuInfo(items, orderId);
 
-      // 모든 menuId 추출
-      final menuIds = <String>[];
-      for (final item in items) {
-        if (item is Map<String, dynamic>) {
-          final menuId = item['menuId'] as String?;
-          if (menuId != null && menuId.isNotEmpty) {
-            menuIds.add(menuId);
-          }
-        }
-      }
-
-      // 배치 조회: 모든 menuId에 해당하는 Menu 정보 조회
-      final menus = await _menuRepository.getMenusByIds(menuIds);
-      final menuMap = <String, Map<String, dynamic>>{};
-      for (final menu in menus) {
-        menuMap[menu.id] = {
-          'name': menu.name,
-          'price': menu.price,
-        };
-      }
-
-      final displayItems = <dynamic>[];
-
-      for (final item in items) {
-        if (item is Map<String, dynamic>) {
-          final menuId = item['menuId'] as String?;
-          final quantity = item['quantity'] as int? ?? 1;
-          final status = item['status'] as String? ?? 'ordered';
-          final orderedAtTimestamp = item['orderedAt'] as Timestamp?;
-          final priceAtOrder = item['priceAtOrder'] as int? ?? 0;
-
-          // orderedAt 시간 포맷팅
-          String? orderedAtStr;
-          if (orderedAtTimestamp != null) {
-            final dateTime = orderedAtTimestamp.toDate();
-            final hour = dateTime.hour.toString().padLeft(2, '0');
-            final minute = dateTime.minute.toString().padLeft(2, '0');
-            final second = dateTime.second.toString().padLeft(2, '0');
-            orderedAtStr = '$hour:$minute:$second';
-          }
-
-          // Menu 정보 조회
-          final menuInfo = menuId != null ? menuMap[menuId] : null;
-          final menuName = menuInfo?['name'] ?? '미정의';
-
-          displayItems.add({
-            'menuId': menuId,
-            'quantity': quantity,
-            'status': status,
-            'orderedAt': orderedAtStr,
-            'priceAtOrder': priceAtOrder,
-            'name': menuName,
-            'price': priceAtOrder,  // 주문 시점의 가격 사용
-          });
-        }
-      }
-
-      return displayItems;
+      return {
+        'orderId': orderId,
+        'items': displayItems,
+        'createdAt': data['createdAt'] as Timestamp?,
+        'totalPrice': (data['totalPrice'] as int?) ?? 0,
+      };
     } catch (e) {
       developer.log(
-        'Error extracting menus from orders: $e',
+        'Error building order entry for $orderId: $e',
         name: 'ReceiptRepository',
       );
-      return [];
+      return null;
     }
+  }
+
+  Future<List<dynamic>> _mapOrderItemsWithMenuInfo(
+    List<dynamic> items,
+    String orderId,
+  ) async {
+    final menuIds = <String>{};
+    for (final item in items) {
+      if (item is Map<String, dynamic>) {
+        final menuId = item['menuId'] as String?;
+        if (menuId != null && menuId.isNotEmpty) {
+          menuIds.add(menuId);
+        }
+      }
+    }
+
+    final menus = menuIds.isEmpty
+        ? <Menu>[]
+        : await _menuRepository.getMenusByIds(menuIds.toList());
+    final menuMap = <String, Map<String, dynamic>>{};
+    for (final menu in menus) {
+      menuMap[menu.id] = {
+        'name': menu.name,
+        'price': menu.price,
+      };
+    }
+
+    final displayItems = <dynamic>[];
+
+    for (int index = 0; index < items.length; index++) {
+      final item = items[index];
+      if (item is Map<String, dynamic>) {
+        final menuId = item['menuId'] as String?;
+        final quantity = item['quantity'] as int? ?? 1;
+        final status = item['status'] as String? ?? 'ordered';
+        final orderedAtTimestamp = item['orderedAt'] as Timestamp?;
+        final priceAtOrder = item['priceAtOrder'] as int? ?? 0;
+
+        String? orderedAtStr;
+        if (orderedAtTimestamp != null) {
+          final dateTime = orderedAtTimestamp.toDate();
+          orderedAtStr =
+              '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+        }
+
+        final menuInfo = menuId != null ? menuMap[menuId] : null;
+        final menuName = menuInfo?['name'] ?? '미정의';
+
+        displayItems.add({
+          'menuId': menuId,
+          'quantity': quantity,
+          'status': status,
+          'orderedAt': orderedAtStr,
+          'priceAtOrder': priceAtOrder,
+          'name': menuName,
+          'price': priceAtOrder,
+          'sourceOrderId': orderId,
+          'sourceItemIndex': index,
+        });
+      }
+    }
+
+    return displayItems;
   }
 
   /// 시간 포맷팅
@@ -585,5 +735,17 @@ class ReceiptRepository {
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  int _calculateTotalFromItems(List<dynamic> items) {
+    int total = 0;
+    for (final item in items) {
+      if (item is Map<String, dynamic>) {
+        final price = item['price'] ?? item['priceAtOrder'] ?? 0;
+        final quantity = item['quantity'] ?? 0;
+        total += (price as int) * (quantity as int);
+      }
+    }
+    return total;
   }
 }

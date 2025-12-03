@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:table_order/models/admin/receipt_status.dart';
 import 'package:table_order/models/admin/table_order_info.dart';
 import 'package:table_order/service/admin/order_service.dart';
 import 'package:table_order/service/admin/receipt_service.dart';
@@ -14,10 +17,14 @@ class OrderProvider extends ChangeNotifier {
   final ReceiptService _receiptService = ReceiptService();
   final StaffRequestService _staffRequestService = StaffRequestService();
   final StoreService _storeService = StoreService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   List<TableOrderInfo> _tables = [];
   bool _loading = false;
   String? _error;
+  StreamSubscription<QuerySnapshot>? _receiptsListener;
+  StreamSubscription<QuerySnapshot>? _ordersListener;
+  StreamSubscription<QuerySnapshot>? _callRequestsListener;
 
   // Getters
   List<TableOrderInfo> get tables => _tables;
@@ -113,6 +120,296 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  /// 미정산 영수증 실시간 리스닝 시작
+  /// loadTables() 호출 후 이 메서드를 호출하여 실시간 업데이트 수신
+  void startListeningForUnpaidReceipts(String storeId) {
+    // 기존 리스너 정리
+    _receiptsListener?.cancel();
+    _ordersListener?.cancel();
+    _callRequestsListener?.cancel();
+
+    try {
+      developer.log(
+        'Starting Firestore listeners for storeId=$storeId',
+        name: 'OrderProvider',
+      );
+
+      final unpaidStatus = ReceiptStatus.unpaid.value;
+
+      // 1. Receipts 컬렉션 리스너 (Receipt 생성/삭제 감지)
+      _receiptsListener = _firestore
+          .collection('Receipts')
+          .where('status', isEqualTo: unpaidStatus)
+          .where('storeId', isEqualTo: storeId)
+          .snapshots()
+          .listen(
+        (snapshot) async {
+          developer.log(
+            '🔔 Receipts snapshot received: ${snapshot.docs.length} receipts, '
+            'docChanges: ${snapshot.docChanges.length}',
+            name: 'OrderProvider',
+          );
+
+          // 변경된 문서 정보 로깅
+          for (final change in snapshot.docChanges) {
+            developer.log(
+              '  - ${change.type}: ${change.doc.id}',
+              name: 'OrderProvider',
+            );
+          }
+
+          // 변경된 영수증 데이터 로드
+          await _updateTablesFromReceipts(snapshot.docs, storeId);
+        },
+        onError: (error) {
+          developer.log(
+            'Error in Receipts listener: $error',
+            name: 'OrderProvider',
+          );
+        },
+      );
+
+      // 2. Orders 컬렉션 리스너 (메뉴 추가/변경 감지)
+      _ordersListener = _firestore
+          .collection('Orders')
+          .where('storeId', isEqualTo: storeId)
+          .snapshots()
+          .listen(
+        (snapshot) async {
+          developer.log(
+            '🔔 Orders snapshot received: ${snapshot.docs.length} orders, '
+            'docChanges: ${snapshot.docChanges.length}',
+            name: 'OrderProvider',
+          );
+
+          // 변경된 문서 정보 로깅
+          for (final change in snapshot.docChanges) {
+            developer.log(
+              '  - ${change.type}: ${change.doc.id}',
+              name: 'OrderProvider',
+            );
+          }
+
+          // Orders가 변경되면 Receipts도 다시 로드
+          final receiptsSnapshot = await _firestore
+              .collection('Receipts')
+              .where('status', isEqualTo: unpaidStatus)
+              .where('storeId', isEqualTo: storeId)
+              .get();
+
+          await _updateTablesFromReceipts(receiptsSnapshot.docs, storeId);
+        },
+        onError: (error) {
+          developer.log(
+            'Error in Orders listener: $error',
+            name: 'OrderProvider',
+          );
+        },
+      );
+
+      // 3. CallRequests 컬렉션 리스너 (직원 호출 실시간 표시)
+      _callRequestsListener = _firestore
+          .collection('CallRequests')
+          .where('storeId', isEqualTo: storeId)
+          .where('status', isEqualTo: 'pending')
+          .snapshots()
+          .listen(
+        (snapshot) {
+          developer.log(
+            '🔔 CallRequests snapshot received: ${snapshot.docs.length} pending',
+            name: 'OrderProvider',
+          );
+          _applyCallRequestsSnapshot(snapshot);
+        },
+        onError: (error) {
+          developer.log(
+            'Error in CallRequests listener: $error',
+            name: 'OrderProvider',
+          );
+        },
+      );
+
+      developer.log(
+        'Firestore listeners started successfully',
+        name: 'OrderProvider',
+      );
+    } catch (e) {
+      developer.log('Error starting listeners: $e', name: 'OrderProvider');
+    }
+  }
+
+  /// Receipts snapshot으로부터 테이블 데이터 업데이트
+  Future<void> _updateTablesFromReceipts(
+    List<QueryDocumentSnapshot> receiptDocs,
+    String storeId,
+  ) async {
+    try {
+      // 각 영수증의 Orders 정보를 병렬로 가져오기
+      final receiptFutures = <Future<Map<String, dynamic>>>[
+        for (final receiptDoc in receiptDocs)
+          _receiptService.getOrdersByReceiptId(receiptDoc.id).then((metadata) {
+            final result = <String, dynamic>{};
+            result['receiptId'] = receiptDoc.id;
+            result['data'] = receiptDoc.data();
+            result['orders'] = metadata['orders'] as List<dynamic>? ?? [];
+            return result;
+          }).catchError((_) {
+            final result = <String, dynamic>{};
+            result['receiptId'] = receiptDoc.id;
+            result['data'] = receiptDoc.data();
+            result['orders'] = <dynamic>[];
+            return result;
+          }),
+      ];
+
+      final receiptDataList = await Future.wait(receiptFutures);
+
+      // 기존 테이블 이름 정보 보존 (StoreService에서 가져온 테이블 정보)
+      final existingTableNames = <String, String>{};
+      for (final table in _tables) {
+        existingTableNames[table.tableId] = table.tableName;
+      }
+
+      // 직원 호출 정보 보존
+      final existingCallRequests = <String, bool>{};
+      for (final table in _tables) {
+        existingCallRequests[table.tableId] = table.hasCallRequest;
+      }
+
+      // 테이블별로 영수증을 그룹화
+      final tableOrdersMap = <String, List<TableOrder>>{};
+
+      for (final receiptData in receiptDataList) {
+        final receiptId = receiptData['receiptId'] as String;
+        final data = receiptData['data'] as Map<String, dynamic>;
+        final orderEntries = (receiptData['orders'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .toList();
+        final tableId = data['tableId'] as String?;
+
+        if (tableId == null) continue;
+
+        // 테이블 이름 결정 (기존 이름 우선, 없으면 Firestore 데이터 사용)
+        final tableName = existingTableNames[tableId] ??
+            data['tableName'] as String? ??
+            tableId;
+
+        orderEntries.sort((a, b) {
+          final aTs = a['createdAt'] as Timestamp?;
+          final bTs = b['createdAt'] as Timestamp?;
+          final aMillis = aTs?.millisecondsSinceEpoch ?? 0;
+          final bMillis = bTs?.millisecondsSinceEpoch ?? 0;
+          return bMillis.compareTo(aMillis);
+        });
+
+        if (orderEntries.isEmpty) {
+          // 주문 정보가 없으면 빈 주문 한 개를 추가 (레거시 대비)
+          orderEntries.add({
+            'orderId': null,
+            'items': <dynamic>[],
+            'createdAt': data['createdAt'],
+            'totalPrice': (data['totalPrice'] as int?) ?? 0,
+          });
+        }
+
+        for (final entry in orderEntries) {
+          final items = (entry['items'] as List<dynamic>? ?? []);
+          final actualOrderId = entry['orderId'] as String?;
+          final createdAt = entry['createdAt'] as Timestamp? ??
+              data['createdAt'] as Timestamp?;
+          final entryTotalPrice = entry['totalPrice'] as int? ??
+              _calculateTotalFromItems(items);
+
+          final hasNewItemInThisOrder = items.any((item) {
+            if (item is! Map<String, dynamic>) return false;
+            final status = (item['status'] as String? ?? '').toUpperCase();
+            return status == 'ORDERED';
+          });
+
+          final tableOrder = TableOrder(
+            orderId: receiptId,
+            actualOrderId: actualOrderId,
+            tableId: tableId,
+            tableName: tableName,
+            items: items,
+            orderTime: _formatTime(createdAt),
+            totalPrice: entryTotalPrice,
+            hasNewOrder: hasNewItemInThisOrder,
+            orderStatus:
+                hasNewItemInThisOrder ? OrderStatus.ordered : OrderStatus.empty,
+          );
+
+          if (!tableOrdersMap.containsKey(tableId)) {
+            tableOrdersMap[tableId] = [];
+          }
+          tableOrdersMap[tableId]!.add(tableOrder);
+        }
+      }
+
+      // 새로운 테이블 목록 생성 (기존 테이블 구조 유지)
+      final updatedTables = <TableOrderInfo>[];
+
+      // 기존 테이블을 순회하며 업데이트
+      for (final existingTable in _tables) {
+        final tableId = existingTable.tableId;
+        final ordersForTable = tableOrdersMap[tableId] ?? [];
+
+        updatedTables.add(TableOrderInfo(
+          tableId: tableId,
+          tableName: existingTable.tableName,
+          orders: ordersForTable,
+          hasCallRequest: existingCallRequests[tableId] ?? false,
+        ));
+
+        // 처리된 테이블은 맵에서 제거
+        tableOrdersMap.remove(tableId);
+      }
+
+      // 새로 생긴 테이블 추가 (기존 목록에 없던 테이블)
+      for (final entry in tableOrdersMap.entries) {
+        final tableId = entry.key;
+        final orders = entry.value;
+        final tableName = orders.isNotEmpty
+            ? orders.first.tableName
+            : tableId;
+
+        updatedTables.add(TableOrderInfo(
+          tableId: tableId,
+          tableName: tableName,
+          orders: orders,
+          hasCallRequest: false,
+        ));
+      }
+
+      _tables = updatedTables;
+
+      developer.log(
+        'Updated tables from receipts: ${_tables.length} tables, ${receiptDocs.length} receipts',
+        name: 'OrderProvider',
+      );
+
+      notifyListeners();
+    } catch (e) {
+      developer.log('Error updating tables from receipts: $e', name: 'OrderProvider');
+    }
+  }
+
+  /// 리스닝 중지
+  void stopListeningForUnpaidReceipts() {
+    _receiptsListener?.cancel();
+    _receiptsListener = null;
+    _ordersListener?.cancel();
+    _ordersListener = null;
+    _callRequestsListener?.cancel();
+    _callRequestsListener = null;
+  }
+
+  @override
+  void dispose() {
+    stopListeningForUnpaidReceipts();
+    super.dispose();
+  }
+
   // ============= 메뉴 관리 메서드 =============
 
   /// 메뉴 수량 변경
@@ -139,10 +436,12 @@ class OrderProvider extends ChangeNotifier {
         _updateOrderStatus(order);
         notifyListeners();
 
-        // Firestore에 저장
+        final target = _resolveMenuTarget(order, item, itemIndex);
+
+        // Firestore에 저장 (source 메타데이터 우선 사용)
         final success = await _orderService.updateMenuQuantity(
-          orderId: order.orderId,
-          menuIndex: itemIndex,
+          orderId: target.orderId,
+          menuIndex: target.menuIndex,
           newQuantity: newQuantity,
         );
 
@@ -192,11 +491,13 @@ class OrderProvider extends ChangeNotifier {
         item['status'] = newStatus;
         notifyListeners();
 
-        // Firestore에 저장
+        final target = _resolveMenuTarget(order, item, itemIndex);
+
+        // Firestore에 저장 (source 정보 우선 사용, status는 대문자로 저장)
         final success = await _orderService.updateMenuStatus(
-          orderId: order.orderId,
-          menuIndex: itemIndex,
-          newStatus: newStatus,
+          orderId: target.orderId,
+          menuIndex: target.menuIndex,
+          newStatus: newStatus.toUpperCase(),
         );
 
         if (!success) {
@@ -233,14 +534,17 @@ class OrderProvider extends ChangeNotifier {
     if (itemIndex < 0 || itemIndex >= order.items.length) return;
 
     try {
+      final dynamic item = order.items[itemIndex];
       order.items.removeAt(itemIndex);
       _updateOrderStatus(order);
       notifyListeners();
 
-      // Firestore에 저장
+      final target = _resolveMenuTarget(order, item, itemIndex);
+
+      // Firestore에 저장 (source 정보 우선 사용)
       final success = await _orderService.removeMenu(
-        orderId: order.orderId,
-        menuIndex: itemIndex,
+        orderId: target.orderId,
+        menuIndex: target.menuIndex,
       );
 
       if (!success) {
@@ -274,7 +578,7 @@ class OrderProvider extends ChangeNotifier {
         'name': menuData['name'] ?? '미정의',
         'price': menuData['price'] ?? 0,
         'quantity': menuData['quantity'] ?? 1,
-        'status': 'ordered',
+        'status': 'ORDERED',
         'orderedAt': DateTime.now(),
       };
 
@@ -288,7 +592,7 @@ class OrderProvider extends ChangeNotifier {
         name: 'OrderProvider',
       );
 
-      // Firestore에 메뉴 추가 (Receipt.menus[] 배열에 추가)
+      // Firestore에 메뉴 추가 (Orders 컬렉션의 최신 Order에 메뉴 추가)
       final success = await _receiptService.addMenuToReceipt(
         receiptId: order.orderId,
         menuData: menuData,
@@ -325,7 +629,7 @@ class OrderProvider extends ChangeNotifier {
 
       final success = await _receiptService.updateReceiptStatus(
         receiptId: order.orderId,
-        newStatus: 'paid',
+        newStatus: ReceiptStatus.paid.value,
       );
 
       if (success) {
@@ -383,35 +687,93 @@ class OrderProvider extends ChangeNotifier {
   /// 주문의 총 가격 및 상태 업데이트
   void _updateOrderStatus(TableOrder order) {
     int total = 0;
+    bool hasOrderedItem = false;
     for (final item in order.items) {
       if (item is Map) {
         final price = item['price'] ?? 0;
         final quantity = item['quantity'] ?? 0;
+        final status = (item['status'] as String? ?? '').toUpperCase();
+        if (status == 'ORDERED') {
+          hasOrderedItem = true;
+        }
         total += (price as int) * (quantity as int);
       }
     }
     order.totalPrice = total;
 
-    // 주문이 있으면 상태 변경
-    if (order.items.isNotEmpty) {
-      order.orderStatus = OrderStatus.ordered;
-    } else {
-      order.orderStatus = OrderStatus.empty;
+    order.hasNewOrder = hasOrderedItem;
+    order.orderStatus = hasOrderedItem ? OrderStatus.ordered : OrderStatus.empty;
+  }
+
+  int _calculateTotalFromItems(List<dynamic> items) {
+    int total = 0;
+    for (final item in items) {
+      if (item is Map) {
+        final dynamic price = item['price'] ?? item['priceAtOrder'] ?? 0;
+        final dynamic quantity = item['quantity'] ?? 0;
+        total += (price as int) * (quantity as int);
+      }
     }
+    return total;
   }
 
   /// 상태 전환 가능 여부 확인
   bool _canTransitionStatus(String currentStatus, String newStatus) {
-    switch (currentStatus.toLowerCase()) {
-      case 'ordered':
-        return newStatus == 'cooking' || newStatus == 'canceled';
-      case 'cooking':
-        return newStatus == 'completed' || newStatus == 'canceled';
-      case 'completed':
-      case 'canceled':
+    final current = currentStatus.toUpperCase();
+    final next = newStatus.toUpperCase();
+
+    switch (current) {
+      case 'ORDERED':
+        return next == 'COOKING' || next == 'CANCELED';
+      case 'COOKING':
+        return next == 'COMPLETED' || next == 'CANCELED';
+      case 'COMPLETED':
+      case 'CANCELED':
         return false;
       default:
         return false;
+    }
+  }
+
+  /// Timestamp를 시간 문자열로 포맷
+  String? _formatTime(Timestamp? timestamp) {
+    if (timestamp == null) return null;
+    final dateTime = timestamp.toDate();
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  /// 직원 호출 스냅샷을 기반으로 hasCallRequest 갱신
+  void _applyCallRequestsSnapshot(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    try {
+      final tablesWithCall = snapshot.docs
+          .map((doc) {
+            final tableId = doc.data()['tableId'] as String?;
+            return tableId;
+          })
+          .whereType<String>()
+          .toSet();
+
+      var changed = false;
+      for (final table in _tables) {
+        final hasRequest = tablesWithCall.contains(table.tableId);
+        if (table.hasCallRequest != hasRequest) {
+          table.hasCallRequest = hasRequest;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        notifyListeners();
+      }
+    } catch (e) {
+      developer.log(
+        'Error applying call request snapshot: $e',
+        name: 'OrderProvider',
+      );
     }
   }
 
@@ -420,4 +782,33 @@ class OrderProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  /// 메뉴 항목이 속한 실제 Order ID와 item index를 계산
+  _MenuTarget _resolveMenuTarget(
+    TableOrder order,
+    dynamic item,
+    int fallbackIndex,
+  ) {
+    if (item is Map) {
+      final sourceOrderId = item['sourceOrderId'] as String?;
+      final sourceItemIndex = item['sourceItemIndex'];
+      if (sourceOrderId != null &&
+          sourceOrderId.isNotEmpty &&
+          sourceItemIndex is int) {
+        return _MenuTarget(
+          sourceOrderId,
+          sourceItemIndex,
+        );
+      }
+    }
+
+    final fallbackOrderId = order.actualOrderId ?? order.orderId;
+    return _MenuTarget(fallbackOrderId, fallbackIndex);
+  }
+}
+
+class _MenuTarget {
+  final String orderId;
+  final int menuIndex;
+  _MenuTarget(this.orderId, this.menuIndex);
 }

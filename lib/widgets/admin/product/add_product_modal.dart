@@ -21,7 +21,6 @@ class _ProductAddModalState extends State<ProductAddModal> {
   final TextEditingController priceController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
-  int stock = 0;
   bool isSoldOut = false;
   bool isActive = true;
   String? selectedCategoryId;
@@ -90,7 +89,6 @@ class _ProductAddModalState extends State<ProductAddModal> {
         categoryId: selectedCategoryId ?? '', // 카테고리가 없으면 빈 문자열
         name: nameController.text.trim(),
         price: priceController.text.trim(),
-        stock: stock,
         isSoldOut: isSoldOut,
         isActive: isActive,
         description: descriptionController.text.trim(),
@@ -224,31 +222,6 @@ class _ProductAddModalState extends State<ProductAddModal> {
                 controller: priceController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: "가격"),
-              ),
-
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("재고"),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            if (stock > 0) stock--;
-                          });
-                        },
-                        icon: const Icon(Icons.remove_circle_outline),
-                      ),
-                      Text("$stock"),
-                      IconButton(
-                        onPressed: () => setState(() => stock++),
-                        icon: const Icon(Icons.add_circle_outline),
-                      ),
-                    ],
-                  ),
-                ],
               ),
 
               Row(

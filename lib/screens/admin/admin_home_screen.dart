@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:table_order/provider/admin/login_provider.dart';
 import 'package:table_order/provider/admin/order_provider.dart';
 import 'package:table_order/provider/app_state_provider.dart';
 import 'package:table_order/widgets/admin/content_area/category_area.dart';
@@ -28,16 +29,28 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final appState = context.read<AppStateProvider>();
+      final loginProvider = context.read<LoginProvider>();
       final orderProvider = context.read<OrderProvider>();
 
-      if (appState.storeId != null) {
+      final storeId = appState.storeId ?? loginProvider.storeId;
+
+      if (storeId != null && storeId.isNotEmpty) {
         developer.log(
-          'Loading orders for storeId=${appState.storeId}',
+          'Loading orders for storeId=$storeId',
           name: 'AdminHomeScreen',
         );
-        await orderProvider.loadTables(appState.storeId!);
+        await orderProvider.loadTables(storeId);
+        // 실시간 리스닝 시작
+        orderProvider.startListeningForUnpaidReceipts(storeId);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    final orderProvider = context.read<OrderProvider>();
+    orderProvider.stopListeningForUnpaidReceipts();
+    super.dispose();
   }
 
   void _onMenuSelected(String menu) {

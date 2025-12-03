@@ -243,7 +243,6 @@ class MenuRepository {
         storeId: storeIdStr,
         name: data['name'] ?? '',
         price: data['price']?.toString() ?? '0',
-        stock: data['stock'] ?? 0,
         isSoldOut: data['isSoldOut'] ?? false,
         isActive: data['isActive'] ?? true,
         description: data['description'] ?? '',
@@ -261,7 +260,6 @@ class MenuRepository {
     return {
       'name': p.name,
       'price': int.tryParse(p.price) ?? 0,
-      'stock': p.stock,
       'isSoldOut': p.isSoldOut,
       'isActive': p.isActive,
       'description': p.description,

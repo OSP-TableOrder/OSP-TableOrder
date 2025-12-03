@@ -2,17 +2,19 @@ enum OrderStatus { empty, ordered }
 
 /// 테이블의 각 주문을 나타내는 모델
 class TableOrder {
-  final String orderId;           // Firestore 주문 ID (receiptId)
+  final String orderId;           // Firestore 영수증 ID (receiptId)
+  final String? actualOrderId;    // Orders 컬렉션의 실제 Order ID (정규화된 구조)
   final String tableId;
   final String tableName;
   List<dynamic> items;            // 이 주문의 메뉴 항목들 (mutable)
   final String? orderTime;        // 주문 시간
   int totalPrice;                 // 이 주문의 총 가격 (mutable)
-  bool hasNewOrder;               // 새로운 ORDERED 상태 항목 있음 (mutable)
+  bool hasNewOrder;               // 새로운 ORDERED 상태 항목 있음 (mutable) - 이 주문에 대해
   OrderStatus orderStatus;        // 주문 상태 (mutable)
 
   TableOrder({
     required this.orderId,
+    this.actualOrderId,
     required this.tableId,
     required this.tableName,
     this.items = const [],

@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
+import 'package:table_order/models/admin/receipt_status.dart';
 import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/models/admin/order.dart' as order_model;
 import 'package:table_order/models/customer/order.dart';
@@ -7,15 +8,12 @@ import 'package:table_order/models/customer/order_menu.dart';
 import 'package:table_order/models/common/order_menu_status.dart';
 import 'package:table_order/models/customer/order_status.dart';
 
-/// OrderServer - 정규화된 Orders 컬렉션 관리
+/// `_OrdersRepository` - 정규화된 Orders 컬렉션 관리
 ///
 /// 역할:
 /// - 새로운 정규화된 데이터 구조 지원 (Orders 컬렉션)
 /// - menuId 참조 기반 데이터 저장
-/// - OrderServerStub과 병행하여 마이그레이션 기간 지원
-///
-/// 참고: 기존 Receipts 컬렉션은 OrderServerStub이 담당
-class OrderServer {
+class _OrdersRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _ordersCollection = 'Orders';
 
@@ -180,7 +178,7 @@ class OrderServer {
       items.add({
         'menuId': menuId,
         'quantity': quantity,
-        'status': 'ordered',
+        'status': 'ORDERED',
         'completedCount': 0,
         'orderedAt': Timestamp.fromDate(DateTime.now()),
         'priceAtOrder': priceAtOrder,
@@ -189,7 +187,8 @@ class OrderServer {
       // totalPrice 재계산
       int newTotalPrice = 0;
       for (final item in items) {
-        if (item['status'] != 'canceled') {
+        final status = (item['status'] as String?)?.toUpperCase() ?? '';
+        if (status != 'CANCELED') {
           newTotalPrice += ((item['priceAtOrder'] as int?) ?? 0) *
               ((item['quantity'] as int?) ?? 1);
         }
@@ -241,7 +240,8 @@ class OrderServer {
       // totalPrice 재계산
       int newTotalPrice = 0;
       for (final item in items) {
-        if (item['status'] != 'canceled') {
+        final status = (item['status'] as String?)?.toUpperCase() ?? '';
+        if (status != 'CANCELED') {
           newTotalPrice += ((item['priceAtOrder'] as int?) ?? 0) *
               ((item['quantity'] as int?) ?? 1);
         }
@@ -288,12 +288,13 @@ class OrderServer {
 
       if (itemIndex < 0 || itemIndex >= items.length) return null;
 
-      items[itemIndex]['status'] = 'canceled';
+      items[itemIndex]['status'] = 'CANCELED';
 
       // totalPrice 재계산
       int newTotalPrice = 0;
       for (final item in items) {
-        if (item['status'] != 'canceled') {
+        final status = (item['status'] as String?)?.toUpperCase() ?? '';
+        if (status != 'CANCELED') {
           newTotalPrice += ((item['priceAtOrder'] as int?) ?? 0) *
               ((item['quantity'] as int?) ?? 1);
         }
@@ -323,13 +324,12 @@ class OrderServer {
   }
 }
 
-// ====================================================================================
-// OrderServerStub - 기존 비정규화된 Receipts 컬렉션 관리 (backward compatibility)
-// ====================================================================================
-
-class OrderServerStub {
+/// OrderServer - 고객 주문 비즈니스 로직
+/// Receipts 컬렉션을 관리하며 Orders 정규화 데이터와 연동한다.
+class OrderServer {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collectionName = 'Receipts';
+  final _OrdersRepository _ordersRepository = _OrdersRepository();
 
   /// 새로운 주문 생성 (orderId는 Firestore에서 자동 생성)
   /// 동시에 정규화된 Orders 컬렉션에도 Order 문서 생성
@@ -343,21 +343,24 @@ class OrderServerStub {
       final docRef = _firestore.collection(_collectionName).doc(receiptId);
 
       // 1) Orders 컬렉션에 먼저 생성 (정규화된 구조) - Order ID 획득
-      final orderServer = OrderServer();
-      final order = await orderServer.createOrder(
+      final order = await _ordersRepository.createOrder(
         receiptId: receiptId,
         storeId: storeId,
         tableId: tableId,
       );
 
-      // 2) Receipts 컬렉션에 생성 (orderId 필드 포함)
+      if (order == null) {
+        developer.log('Failed to create order in Orders collection', name: 'OrderServer');
+        return null;
+      }
+
+      // 2) Receipts 컬렉션에 생성 (orders 배열 포함)
       await docRef.set({
-        'orderId': order?.id,  // Orders 컬렉션의 Order ID 저장
+        'orders': [order.id],  // Orders 컬렉션의 Order ID 배열 저장
         'storeId': storeId,
         'tableId': tableId,
         'totalPrice': 0,
-        'menus': [],
-        'status': 'unpaid',
+        'status': ReceiptStatus.unpaid.value,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -372,7 +375,7 @@ class OrderServerStub {
         createdAt: now,
       );
     } catch (e) {
-      developer.log('Error creating order: $e', name: 'OrderServerStub');
+      developer.log('Error creating order: $e', name: 'OrderServer');
       return null;
     }
   }
@@ -393,48 +396,9 @@ class OrderServerStub {
       if (!snapshot.exists) return null;
 
       final data = snapshot.data() as Map<String, dynamic>?;
-      if (data == null) return null;
-
-      // Orders 컬렉션의 orderId 획득
-      final ordersId = data['orderId'] as String?;
-
-      // 1. Legacy Receipts.menus[]에서 로드 (backward compatibility)
-      final menusData = data['menus'] as List<dynamic>? ?? [];
-
-      if (menusData.isNotEmpty) {
-        // Legacy 경로: Receipts.menus[] 사용
-        return _parseOrder(snapshot.id, data);
-      }
-
-      // 2. Orders 정규화 구조에서 Menu 정보 로드
-      if (ordersId != null && ordersId.isNotEmpty) {
-        final ordersMenus = await _loadMenusFromOrders(ordersId);
-        if (ordersMenus.isNotEmpty) {
-          final status = data['status'] as String? ?? 'unpaid';
-          final orderStatus = status == 'paid' ? OrderStatus.paid : OrderStatus.unpaid;
-
-          DateTime? createdAt;
-          final timestamp = data['createdAt'] as Timestamp?;
-          if (timestamp != null) {
-            createdAt = timestamp.toDate();
-          }
-
-          return Order(
-            id: snapshot.id,
-            storeId: data['storeId'] as String? ?? '',
-            tableId: data['tableId'] as String? ?? '',
-            totalPrice: (data['totalPrice'] as num?)?.toInt() ?? 0,
-            menus: ordersMenus,
-            status: orderStatus,
-            createdAt: createdAt,
-          );
-        }
-      }
-
-      // 3. Fallback: 메뉴 없는 Order 반환
-      return _parseOrder(snapshot.id, data);
+      return await _buildOrderFromReceiptData(snapshot.id, data);
     } catch (e) {
-      developer.log('Error fetching order: $e', name: 'OrderServerStub');
+      developer.log('Error fetching order: $e', name: 'OrderServer');
       return null;
     }
   }
@@ -455,7 +419,7 @@ class OrderServerStub {
           .collection(_collectionName)
           .where('storeId', isEqualTo: storeId)
           .where('tableId', isEqualTo: tableId)
-          .where('status', isEqualTo: 'unpaid')
+          .where('status', isEqualTo: ReceiptStatus.unpaid.value)
           .orderBy('createdAt', descending: true)
           .limit(1)
           .get();
@@ -464,59 +428,21 @@ class OrderServerStub {
 
       final doc = snapshot.docs.first;
       final data = doc.data() as Map<String, dynamic>?;
-      if (data == null) return null;
-
-      // Orders 컬렉션의 orderId 획득
-      final ordersId = data['orderId'] as String?;
-
-      // 1. Legacy Receipts.menus[]에서 로드 (backward compatibility)
-      final menusData = data['menus'] as List<dynamic>? ?? [];
-
-      if (menusData.isNotEmpty) {
-        // Legacy 경로: Receipts.menus[] 사용
-        return _parseOrder(doc.id, data);
-      }
-
-      // 2. Orders 정규화 구조에서 Menu 정보 로드
-      if (ordersId != null && ordersId.isNotEmpty) {
-        final ordersMenus = await _loadMenusFromOrders(ordersId);
-        if (ordersMenus.isNotEmpty) {
-          final status = data['status'] as String? ?? 'unpaid';
-          final orderStatus = status == 'paid' ? OrderStatus.paid : OrderStatus.unpaid;
-
-          DateTime? createdAt;
-          final timestamp = data['createdAt'] as Timestamp?;
-          if (timestamp != null) {
-            createdAt = timestamp.toDate();
-          }
-
-          return Order(
-            id: doc.id,
-            storeId: data['storeId'] as String? ?? '',
-            tableId: data['tableId'] as String? ?? '',
-            totalPrice: (data['totalPrice'] as num?)?.toInt() ?? 0,
-            menus: ordersMenus,
-            status: orderStatus,
-            createdAt: createdAt,
-          );
-        }
-      }
-
-      // 3. Fallback: 메뉴 없는 Order 반환
-      return _parseOrder(doc.id, data);
+      return await _buildOrderFromReceiptData(doc.id, data);
     } catch (e) {
-      developer.log('Error fetching unpaid order: $e', name: 'OrderServerStub');
+      developer.log('Error fetching unpaid order: $e', name: 'OrderServer');
       return null;
     }
   }
 
-  /// 메뉴 추가: 새로운 OrderMenu 항목 추가
+  /// 메뉴 추가: 기존 Order에 메뉴 항목 추가
   /// 정규화된 Orders 컬렉션에만 저장 (Receipts.menus[] 제거됨)
   ///
   /// 프로세스:
-  /// 1. Receipts에서 orderId 조회
-  /// 2. OrderServer.addMenuItem()으로 Orders에 항목 추가
-  /// 3. UI용 Order 반환 (메뉴 정보는 UI에서 별도 조회)
+  /// 1. Receipts에서 orders 배열 조회
+  /// 2. 가장 최신 Order (배열의 마지막)에 메뉴 추가
+  /// 3. Receipts의 totalPrice 업데이트
+  /// 4. UI용 Order 반환
   Future<Order?> addMenu(String receiptId, OrderMenu newMenu) async {
     try {
       final docRef = _firestore.collection(_collectionName).doc(receiptId);
@@ -527,16 +453,22 @@ class OrderServerStub {
       final data = snapshot.data();
       if (data == null) return null;
 
-      // Receipts에서 orderId 조회
-      final orderId = data['orderId'] as String?;
-      if (orderId == null) {
-        developer.log('orderId not found in receipt $receiptId', name: 'OrderServerStub');
+      // Receipts에서 orders 배열 조회
+      final ordersArray = (data['orders'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (ordersArray.isEmpty) {
+        developer.log('No orders found in receipt $receiptId', name: 'OrderServer');
         return null;
       }
 
+      // 가장 최신 Order (배열의 마지막)에 메뉴 추가
+      final orderId = ordersArray.last;
+
       // Orders 컬렉션에 메뉴 추가 (정규화된 구조)
-      final orderServer = OrderServer();
-      final addedOrder = await orderServer.addMenuItem(
+      final addedOrder = await _ordersRepository.addMenuItem(
         orderId: orderId,
         menuId: newMenu.menu.id,
         quantity: newMenu.quantity,
@@ -544,7 +476,7 @@ class OrderServerStub {
       );
 
       if (addedOrder == null) {
-        developer.log('Failed to add menu to order $orderId', name: 'OrderServerStub');
+        developer.log('Failed to add menu to order $orderId', name: 'OrderServer');
         return null;
       }
 
@@ -554,19 +486,14 @@ class OrderServerStub {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // UI용 Order 반환
-      // 메뉴 정보는 UI에서 Orders 데이터로부터 별도 조회
-      return Order(
-        id: receiptId,
-        storeId: addedOrder.storeId,
-        tableId: addedOrder.tableId,
-        totalPrice: addedOrder.totalPrice,
-        menus: [],  // 비정규화된 메뉴는 사용 안 함
-        status: OrderStatus.unpaid,
-        createdAt: addedOrder.createdAt,
+      developer.log(
+        '✅ Receipt updated: receiptId=$receiptId, totalPrice=${addedOrder.totalPrice}',
+        name: 'OrderServer',
       );
+
+      return await findById(receiptId);
     } catch (e) {
-      developer.log('Error adding menu: $e', name: 'OrderServerStub');
+      developer.log('Error adding menu: $e', name: 'OrderServer');
       return null;
     }
   }
@@ -585,7 +512,7 @@ class OrderServerStub {
           .get();
 
       if (!orderDoc.exists) {
-        developer.log('Order $orderId not found', name: 'OrderServerStub');
+        developer.log('Order $orderId not found', name: 'OrderServer');
         return [];
       }
 
@@ -634,7 +561,7 @@ class OrderServerStub {
           } catch (e) {
             developer.log(
               'Error parsing menu ${doc.id}: $e',
-              name: 'OrderServerStub',
+              name: 'OrderServer',
             );
           }
         }
@@ -649,7 +576,7 @@ class OrderServerStub {
         if (menu == null) {
           developer.log(
             'Menu $menuId not found in Menus collection',
-            name: 'OrderServerStub',
+            name: 'OrderServer',
           );
           continue;
         }
@@ -679,7 +606,7 @@ class OrderServerStub {
     } catch (e) {
       developer.log(
         'Error loading menus from Orders: $e',
-        name: 'OrderServerStub',
+        name: 'OrderServer',
       );
       return [];
     }
@@ -703,7 +630,7 @@ class OrderServerStub {
       // Receipts에서 orderId 조회
       final orderId = data['orderId'] as String?;
       if (orderId == null) {
-        developer.log('orderId not found in receipt $receiptId', name: 'OrderServerStub');
+        developer.log('orderId not found in receipt $receiptId', name: 'OrderServer');
         return null;
       }
 
@@ -714,7 +641,7 @@ class OrderServerStub {
           .get();
 
       if (!orderDoc.exists) {
-        developer.log('Order $orderId not found', name: 'OrderServerStub');
+        developer.log('Order $orderId not found', name: 'OrderServer');
         return null;
       }
 
@@ -736,19 +663,18 @@ class OrderServerStub {
       }
 
       if (itemIndex == -1) {
-        developer.log('Menu item $menuId not found in order $orderId', name: 'OrderServerStub');
+        developer.log('Menu item $menuId not found in order $orderId', name: 'OrderServer');
         return null;
       }
 
       // Orders 컬렉션에서 메뉴 취소
-      final orderServer = OrderServer();
-      final canceledOrder = await orderServer.cancelMenuItem(
+      final canceledOrder = await _ordersRepository.cancelMenuItem(
         orderId: orderId,
         itemIndex: itemIndex,
       );
 
       if (canceledOrder == null) {
-        developer.log('Failed to cancel menu in order $orderId', name: 'OrderServerStub');
+        developer.log('Failed to cancel menu in order $orderId', name: 'OrderServer');
         return null;
       }
 
@@ -758,107 +684,157 @@ class OrderServerStub {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // UI용 Order 반환
-      return Order(
-        id: receiptId,
-        storeId: canceledOrder.storeId,
-        tableId: canceledOrder.tableId,
-        totalPrice: canceledOrder.totalPrice,
-        menus: [],  // 비정규화된 메뉴는 사용 안 함
-        status: OrderStatus.unpaid,
-        createdAt: canceledOrder.createdAt,
-      );
+      return await findById(receiptId);
     } catch (e) {
-      developer.log('Error canceling menu: $e', name: 'OrderServerStub');
-      return null;
-    }
-  }
-
-  /// Order 데이터 파싱
-  Order? _parseOrder(String orderId, Map<String, dynamic>? data) {
-    if (data == null) return null;
-
-    try {
-      final menus = <OrderMenu>[];
-      final menusData = data['menus'] as List<dynamic>? ?? [];
-
-      for (final menuData in menusData) {
-        final m = menuData as Map<String, dynamic>?;
-        if (m == null) continue;
-
-        final menuInfo = m['menu'] as Map<String, dynamic>?;
-        if (menuInfo == null) continue;
-
-        // Menu 파싱
-        final price = menuInfo['price'];
-        final priceInt = price is int ? price : (int.tryParse(price as String? ?? '0') ?? 0);
-
-        final menu = Menu(
-          id: menuInfo['id'] as String? ?? '',
-          storeId: menuInfo['storeId'] as String? ?? '',
-          categoryId: menuInfo['categoryId'],
-          name: menuInfo['name'] as String? ?? '',
-          description: menuInfo['description'] as String? ?? '',
-          imageUrl: menuInfo['imageUrl'],
-          price: priceInt,
-          isSoldOut: menuInfo['isSoldOut'] as bool? ?? false,
-          isRecommended: menuInfo['isRecommended'] as bool? ?? false,
-        );
-
-        // OrderMenuStatus 파싱
-        final statusStr = m['status'] as String? ?? 'OrderMenuStatus.ordered';
-        final status = _parseOrderMenuStatus(statusStr);
-
-        // orderedAt 파싱
-        DateTime? orderedAt;
-        final orderedAtTimestamp = m['orderedAt'] as Timestamp?;
-        if (orderedAtTimestamp != null) {
-          orderedAt = orderedAtTimestamp.toDate();
-        }
-
-        final orderMenu = OrderMenu(
-          id: m['id'] as String? ?? '',
-          status: status,
-          quantity: m['quantity'] as int? ?? 0,
-          completedCount: m['completedCount'] as int? ?? 0,
-          menu: menu,
-          orderedAt: orderedAt,
-        );
-
-        menus.add(orderMenu);
-      }
-
-      final statusStr = data['status'] as String? ?? 'unpaid';
-      final status = statusStr == 'paid' ? OrderStatus.paid : OrderStatus.unpaid;
-
-      // createdAt 파싱
-      DateTime? createdAt;
-      final timestamp = data['createdAt'] as Timestamp?;
-      if (timestamp != null) {
-        createdAt = timestamp.toDate();
-      }
-
-      return Order(
-        id: orderId,
-        storeId: data['storeId'] as String? ?? '',
-        tableId: data['tableId'] as String? ?? '',
-        totalPrice: (data['totalPrice'] as num?)?.toInt() ?? 0,
-        menus: menus,
-        status: status,
-        createdAt: createdAt,
-      );
-    } catch (e) {
-      developer.log('Error parsing order: $e', name: 'OrderServerStub');
+      developer.log('Error canceling menu: $e', name: 'OrderServer');
       return null;
     }
   }
 
   /// OrderMenuStatus 문자열을 enum으로 변환
   OrderMenuStatus _parseOrderMenuStatus(String statusStr) {
-    if (statusStr.contains('cooking')) return OrderMenuStatus.cooking;
-    if (statusStr.contains('completed')) return OrderMenuStatus.completed;
-    if (statusStr.contains('canceled')) return OrderMenuStatus.canceled;
+    final normalized = statusStr.toLowerCase();
+    if (normalized.contains('cooking')) return OrderMenuStatus.cooking;
+    if (normalized.contains('completed')) return OrderMenuStatus.completed;
+    if (normalized.contains('canceled')) return OrderMenuStatus.canceled;
     return OrderMenuStatus.ordered;
+  }
+
+  /// Order 생성 (기존 Receipt에 새로운 Order 추가)
+  /// 새로 생성된 Order와 storeId/tableId를 사용하여 Order 생성
+  /// 첫 주문이든 추가 주문이든 항상 호출됨
+  Future<Order?> createOrderForReceipt({
+    required String receiptId,
+    required String storeId,
+    required String tableId,
+  }) async {
+    try {
+      final receiptRef = _firestore.collection(_collectionName).doc(receiptId);
+      final receiptDoc = await receiptRef.get();
+      if (!receiptDoc.exists) return null;
+
+      final data = receiptDoc.data();
+      if (data == null) return null;
+
+      final status = data['status'] as String? ?? 'unpaid';
+      if (status != 'unpaid') {
+        developer.log('Receipt $receiptId is not unpaid. Cannot create additional order.', name: 'OrderServer');
+        return null;
+      }
+
+      final newOrder = await _ordersRepository.createOrder(
+        receiptId: receiptId,
+        storeId: storeId,
+        tableId: tableId,
+      );
+
+      if (newOrder == null) return null;
+
+      final existingOrders = <String>{
+        ...(data['orders'] as List<dynamic>? ?? []).map((e) => e.toString()),
+      };
+      existingOrders.add(newOrder.id);
+
+      await receiptRef.update({
+        'orders': existingOrders.toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      developer.log(
+        'Created additional order for receipt: receiptId=$receiptId, orderId=${newOrder.id}',
+        name: 'OrderServer',
+      );
+
+      // UI용 Order 반환
+      return Order(
+        id: receiptId,
+        storeId: storeId,
+        tableId: tableId,
+        totalPrice: 0,
+        menus: const [],
+        status: OrderStatus.unpaid,
+        createdAt: DateTime.now(),
+      );
+    } catch (e) {
+      developer.log('Error creating additional order for receipt $receiptId: $e', name: 'OrderServer');
+      return null;
+    }
+  }
+
+  Future<bool> createAdditionalOrder(String receiptId) async {
+    try {
+      final receiptRef = _firestore.collection(_collectionName).doc(receiptId);
+      final receiptDoc = await receiptRef.get();
+      if (!receiptDoc.exists) return false;
+
+      final data = receiptDoc.data();
+      if (data == null) return false;
+
+      final status = data['status'] as String? ?? 'unpaid';
+      if (status != 'unpaid') {
+        developer.log('Receipt $receiptId is not unpaid. Cannot create additional order.', name: 'OrderServer');
+        return false;
+      }
+
+      final storeId = data['storeId'] as String?;
+      final tableId = data['tableId'] as String?;
+      if (storeId == null || tableId == null) return false;
+
+      final newOrder = await _ordersRepository.createOrder(
+        receiptId: receiptId,
+        storeId: storeId,
+        tableId: tableId,
+      );
+
+      if (newOrder == null) return false;
+
+      final existingOrders = <String>{
+        ...(data['orders'] as List<dynamic>? ?? []).map((e) => e.toString()),
+      };
+      existingOrders.add(newOrder.id);
+
+      await receiptRef.update({
+        'orders': existingOrders.toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return true;
+    } catch (e) {
+      developer.log('Error creating additional order for receipt $receiptId: $e', name: 'OrderServer');
+      return false;
+    }
+  }
+
+  Future<Order?> _buildOrderFromReceiptData(String receiptId, Map<String, dynamic>? data) async {
+    if (data == null) return null;
+
+    final statusStr = data['status'] as String? ?? 'unpaid';
+    final status = statusStr == 'paid' ? OrderStatus.paid : OrderStatus.unpaid;
+    final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+    final totalPrice = (data['totalPrice'] as num?)?.toInt() ?? 0;
+
+    final aggregatedMenus = <OrderMenu>[];
+    final ordersArray = (data['orders'] as List<dynamic>? ?? [])
+        .map((e) => e as String)
+        .where((id) => id.isNotEmpty)
+        .toList();
+
+    if (ordersArray.isNotEmpty) {
+      for (final id in ordersArray) {
+        final menus = await _loadMenusFromOrders(id);
+        aggregatedMenus.addAll(menus);
+      }
+    }
+
+    return Order(
+      id: receiptId,
+      storeId: data['storeId'] as String? ?? '',
+      tableId: data['tableId'] as String? ?? '',
+      totalPrice: totalPrice,
+      menus: aggregatedMenus,
+      status: status,
+      createdAt: createdAt,
+    );
   }
 
   String _generateReceiptId(DateTime now) {

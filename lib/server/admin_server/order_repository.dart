@@ -53,37 +53,94 @@ class OrderRepository {
 
   /// 주문의 메뉴 상태 업데이트
   Future<bool> updateMenuStatus({
-    required String orderId,
+    required String orderId,  // This is receiptId OR actualOrderId
     required int menuIndex,
     required String newStatus,
   }) async {
     try {
-      final docRef = _firestore.collection(_receiptsCollection).doc(orderId);
-      final doc = await docRef.get();
+      // 먼저 Orders 컬렉션에서 직접 찾기 시도 (actualOrderId인 경우)
+      final orderRef = _firestore.collection(_ordersCollection).doc(orderId);
+      final orderDoc = await orderRef.get();
 
-      if (!doc.exists) {
+      if (orderDoc.exists) {
+        // actualOrderId가 전달된 경우
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final items = List<Map<String, dynamic>>.from(
+          (orderData['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
+        );
+
+        if (menuIndex < 0 || menuIndex >= items.length) {
+          developer.log('Menu index $menuIndex out of range', name: 'OrderRepository');
+          return false;
+        }
+
+        items[menuIndex]['status'] = newStatus;
+
+        await orderRef.update({
+          'items': items,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        developer.log(
+          'Updated menu status in order: orderId=$orderId, menuIndex=$menuIndex, newStatus=$newStatus',
+          name: 'OrderRepository',
+        );
+
+        return true;
+      }
+
+      // Orders에 없으면 receiptId로 간주하고 Receipt에서 찾기
+      final receiptRef = _firestore.collection(_receiptsCollection).doc(orderId);
+      final receiptDoc = await receiptRef.get();
+
+      if (!receiptDoc.exists) {
         developer.log('Receipt $orderId not found', name: 'OrderRepository');
         return false;
       }
 
-      final data = doc.data() as Map<String, dynamic>;
-      final menus = List<Map<String, dynamic>>.from(
-        (data['menus'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
-      );
+      final receiptData = receiptDoc.data() as Map<String, dynamic>;
 
-      if (menuIndex < 0 || menuIndex >= menus.length) {
+      // Receipts.orders[] 배열에서 Order ID 목록 가져오기
+      final ordersArray = (receiptData['orders'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (ordersArray.isEmpty) {
+        developer.log('No orders found in receipt $orderId', name: 'OrderRepository');
         return false;
       }
 
-      menus[menuIndex]['status'] = newStatus;
+      // 가장 최신 Order (마지막 Order)의 항목 업데이트
+      final actualOrderId = ordersArray.last;
 
-      await docRef.update({
-        'menus': menus,
+      final actualOrderRef = _firestore.collection('Orders').doc(actualOrderId);
+      final actualOrderDoc = await actualOrderRef.get();
+
+      if (!actualOrderDoc.exists) {
+        developer.log('Order $actualOrderId not found', name: 'OrderRepository');
+        return false;
+      }
+
+      final orderData = actualOrderDoc.data() as Map<String, dynamic>;
+      final items = List<Map<String, dynamic>>.from(
+        (orderData['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
+      );
+
+      if (menuIndex < 0 || menuIndex >= items.length) {
+        developer.log('Menu index $menuIndex out of range', name: 'OrderRepository');
+        return false;
+      }
+
+      items[menuIndex]['status'] = newStatus;
+
+      await actualOrderRef.update({
+        'items': items,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
       developer.log(
-        'Updated menu status in receipt: receiptId=$orderId, menuIndex=$menuIndex, newStatus=$newStatus',
+        'Updated menu status in order: receiptId=$orderId, orderId=$actualOrderId, menuIndex=$menuIndex, newStatus=$newStatus',
         name: 'OrderRepository',
       );
 
@@ -96,34 +153,81 @@ class OrderRepository {
 
   /// 주문의 메뉴 수량 업데이트
   Future<bool> updateMenuQuantity({
-    required String orderId,
+    required String orderId,  // This is receiptId OR actualOrderId
     required int menuIndex,
     required int newQuantity,
   }) async {
     try {
       if (newQuantity < 1) return false;
 
-      final docRef = _firestore.collection(_receiptsCollection).doc(orderId);
-      final doc = await docRef.get();
+      // 먼저 Orders 컬렉션에서 직접 찾기 시도 (actualOrderId인 경우)
+      final orderRef = _firestore.collection(_ordersCollection).doc(orderId);
+      final orderDoc = await orderRef.get();
 
-      if (!doc.exists) return false;
+      if (orderDoc.exists) {
+        // actualOrderId가 전달된 경우
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final items = List<Map<String, dynamic>>.from(
+          (orderData['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
+        );
 
-      final data = doc.data() as Map<String, dynamic>;
-      final menus = List<Map<String, dynamic>>.from(
-        (data['menus'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
+        if (menuIndex < 0 || menuIndex >= items.length) return false;
+
+        items[menuIndex]['quantity'] = newQuantity;
+
+        await orderRef.update({
+          'items': items,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        developer.log(
+          'Updated menu quantity in order: orderId=$orderId, menuIndex=$menuIndex, newQuantity=$newQuantity',
+          name: 'OrderRepository',
+        );
+
+        return true;
+      }
+
+      // Orders에 없으면 receiptId로 간주하고 Receipt에서 찾기
+      final receiptRef = _firestore.collection(_receiptsCollection).doc(orderId);
+      final receiptDoc = await receiptRef.get();
+
+      if (!receiptDoc.exists) return false;
+
+      final receiptData = receiptDoc.data() as Map<String, dynamic>;
+
+      // Receipts.orders[] 배열에서 Order ID 목록 가져오기
+      final ordersArray = (receiptData['orders'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (ordersArray.isEmpty) return false;
+
+      // 가장 최신 Order (마지막 Order)의 항목 업데이트
+      final actualOrderId = ordersArray.last;
+
+      final actualOrderRef = _firestore.collection('Orders').doc(actualOrderId);
+      final actualOrderDoc = await actualOrderRef.get();
+
+      if (!actualOrderDoc.exists) return false;
+
+      final orderData = actualOrderDoc.data() as Map<String, dynamic>;
+      final items = List<Map<String, dynamic>>.from(
+        (orderData['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
       );
 
-      if (menuIndex < 0 || menuIndex >= menus.length) return false;
+      if (menuIndex < 0 || menuIndex >= items.length) return false;
 
-      menus[menuIndex]['quantity'] = newQuantity;
+      items[menuIndex]['quantity'] = newQuantity;
 
-      await docRef.update({
-        'menus': menus,
+      await actualOrderRef.update({
+        'items': items,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
       developer.log(
-        'Updated menu quantity in receipt: receiptId=$orderId, newQuantity=$newQuantity',
+        'Updated menu quantity in order: receiptId=$orderId, orderId=$actualOrderId, newQuantity=$newQuantity',
         name: 'OrderRepository',
       );
 
@@ -136,31 +240,78 @@ class OrderRepository {
 
   /// 주문의 메뉴 제거
   Future<bool> removeMenu({
-    required String orderId,
+    required String orderId,  // This is receiptId OR actualOrderId
     required int menuIndex,
   }) async {
     try {
-      final docRef = _firestore.collection(_receiptsCollection).doc(orderId);
-      final doc = await docRef.get();
+      // 먼저 Orders 컬렉션에서 직접 찾기 시도 (actualOrderId인 경우)
+      final orderRef = _firestore.collection(_ordersCollection).doc(orderId);
+      final orderDoc = await orderRef.get();
 
-      if (!doc.exists) return false;
+      if (orderDoc.exists) {
+        // actualOrderId가 전달된 경우
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final items = List<Map<String, dynamic>>.from(
+          (orderData['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
+        );
 
-      final data = doc.data() as Map<String, dynamic>;
-      final menus = List<Map<String, dynamic>>.from(
-        (data['menus'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
+        if (menuIndex < 0 || menuIndex >= items.length) return false;
+
+        items.removeAt(menuIndex);
+
+        await orderRef.update({
+          'items': items,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        developer.log(
+          'Removed menu: orderId=$orderId, menuIndex=$menuIndex',
+          name: 'OrderRepository',
+        );
+
+        return true;
+      }
+
+      // Orders에 없으면 receiptId로 간주하고 Receipt에서 찾기
+      final receiptRef = _firestore.collection(_receiptsCollection).doc(orderId);
+      final receiptDoc = await receiptRef.get();
+
+      if (!receiptDoc.exists) return false;
+
+      final receiptData = receiptDoc.data() as Map<String, dynamic>;
+
+      // Receipts.orders[] 배열에서 Order ID 목록 가져오기
+      final ordersArray = (receiptData['orders'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (ordersArray.isEmpty) return false;
+
+      // 가장 최신 Order (마지막 Order)에서 메뉴 제거
+      final actualOrderId = ordersArray.last;
+
+      final actualOrderRef = _firestore.collection('Orders').doc(actualOrderId);
+      final actualOrderDoc = await actualOrderRef.get();
+
+      if (!actualOrderDoc.exists) return false;
+
+      final orderData = actualOrderDoc.data() as Map<String, dynamic>;
+      final items = List<Map<String, dynamic>>.from(
+        (orderData['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
       );
 
-      if (menuIndex < 0 || menuIndex >= menus.length) return false;
+      if (menuIndex < 0 || menuIndex >= items.length) return false;
 
-      menus.removeAt(menuIndex);
+      items.removeAt(menuIndex);
 
-      await docRef.update({
-        'menus': menus,
+      await actualOrderRef.update({
+        'items': items,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
       developer.log(
-        'Removed menu: orderId=$orderId, menuIndex=$menuIndex',
+        'Removed menu: receiptId=$orderId, orderId=$actualOrderId, menuIndex=$menuIndex',
         name: 'OrderRepository',
       );
 
@@ -390,7 +541,7 @@ class OrderRepository {
       items.add({
         'menuId': menuId,
         'quantity': quantity,
-        'status': 'ordered',
+        'status': 'ORDERED',
         'completedCount': 0,
         'orderedAt': Timestamp.fromDate(DateTime.now()),
         'priceAtOrder': priceAtOrder,
@@ -399,7 +550,8 @@ class OrderRepository {
       // totalPrice 재계산
       int newTotalPrice = 0;
       for (final item in items) {
-        if (item['status'] != 'canceled') {
+        final status = (item['status'] as String?)?.toUpperCase() ?? '';
+        if (status != 'CANCELED') {
           newTotalPrice += ((item['priceAtOrder'] as int?) ?? 0) * ((item['quantity'] as int?) ?? 1);
         }
       }

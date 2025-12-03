@@ -40,7 +40,7 @@ class ReceiptService {
     );
   }
 
-  /// 영수증에 메뉴 추가 (메뉴를 Receipt.menus[] 배열에 추가)
+  /// 영수증에 메뉴 추가 (Orders 컬렉션의 최신 Order에 메뉴 추가)
   Future<bool> addMenuToReceipt({
     required String receiptId,
     required Map<String, dynamic> menuData,
@@ -49,5 +49,13 @@ class ReceiptService {
       receiptId: receiptId,
       menuData: menuData,
     );
+  }
+
+  /// 특정 Receipt에 속한 모든 Order 조회 및 메뉴 정보 반환
+  /// 반환 값: `{'orders': List<Map<String, dynamic>>, 'receiptId': String}`
+  /// - orders: 각 Order 문서에 대응하는 {orderId, items, createdAt, totalPrice}
+  /// - receiptId: 영수증 ID
+  Future<Map<String, dynamic>> getOrdersByReceiptId(String receiptId) async {
+    return await _repository.getOrdersByReceiptId(receiptId);
   }
 }

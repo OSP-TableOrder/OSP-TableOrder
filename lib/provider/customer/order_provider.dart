@@ -37,54 +37,56 @@ class OrderStatusViewModel extends ChangeNotifier {
   /// 정산 완료 후 호출: 다음 주문을 위해 receiptId 초기화
   void clearReceipt() {
     _receiptId = null;
-    _order = const Order(
-      id: "0",
-      storeId: "",
-      tableId: "",
-      totalPrice: 0,
-      menus: [],
-    );
+    _order = const Order(id: "0", storeId: "", tableId: "", totalPrice: 0, menus: []);
     notifyListeners();
   }
 
-  /// 새로운 주문 생성
+  /// Order 생성 (기존 Receipt에 새 Order 추가)
+  /// 첫 주문이든 추가 주문이든 항상 호출됨
   Future<void> createOrder({
     required String storeId,
     required String tableId,
   }) async {
-    try {
+    if (_receiptId == null) {
       developer.log(
-        'createOrder: storeId=$storeId, tableId=$tableId',
+        'createOrder called but receiptId is null',
         name: 'OrderStatusViewModel',
       );
-      _order = await _service.createOrder(
+      throw Exception('Receipt ID가 없습니다. 먼저 Receipt을 초기화해주세요.');
+    }
+
+    try {
+      developer.log(
+        'createOrder: receiptId=$_receiptId, storeId=$storeId, tableId=$tableId',
+        name: 'OrderStatusViewModel',
+      );
+
+      // OrderService를 사용해 새로운 Order 생성
+      final newOrder = await _service.createOrder(
+        receiptId: _receiptId!,
         storeId: storeId,
         tableId: tableId,
       );
+
+      _order = newOrder;
       developer.log(
         'Order created successfully: ${_order.id}',
         name: 'OrderStatusViewModel',
       );
-      _receiptId = _order.id;
       notifyListeners();
     } catch (e) {
       developer.log(
         'Error in createOrder: $e',
         name: 'OrderStatusViewModel',
       );
-      _order = const Order(
-        id: "0",
-        storeId: "",
-        tableId: "",
-        totalPrice: 0,
-        menus: [],
-      );
       rethrow;
     }
   }
 
-  /// QR 코드 스캔 시: 기존 미정산 주문이 있으면 로드, 없으면 새로 생성
-  Future<void> initializeOrderForTable({
+  /// QR 코드 스캔 시: 기존 미정산 Receipt이 있으면 로드, 없으면 새로 생성
+  /// 주의: 이 메서드는 Receipt만 생성/로드하며 Order는 생성하지 않음
+  /// Order는 CartScreen에서 실제 주문 시점에 createOrder()로 생성됨
+  Future<void> initializeReceipt({
     required String storeId,
     required String tableId,
   }) async {
@@ -93,51 +95,49 @@ class OrderStatusViewModel extends ChangeNotifier {
 
     try {
       developer.log(
-        'initializeOrderForTable: storeId=$storeId, tableId=$tableId',
+        'initializeReceipt: storeId=$storeId, tableId=$tableId',
         name: 'OrderStatusViewModel',
       );
 
-      // 1) 기존 미정산 주문 찾기
-      final existingOrder = await _service.findUnpaidOrderByTable(
+      // 1) 기존 미정산 Receipt 찾기
+      final existingReceipt = await _service.findUnpaidOrderByTable(
         storeId: storeId,
         tableId: tableId,
       );
 
-      if (existingOrder != null) {
+      if (existingReceipt != null) {
         developer.log(
-          'Found existing unpaid order: ${existingOrder.id}',
+          'Found existing unpaid receipt: ${existingReceipt.id}',
           name: 'OrderStatusViewModel',
         );
-        _order = existingOrder;
-        _receiptId = existingOrder.id;
+        // receiptId만 저장, Order는 생성하지 않음
+        _receiptId = existingReceipt.id;
+        _order = const Order(id: "0", storeId: "", tableId: "", totalPrice: 0, menus: []);
       } else {
-        // 2) 새로운 주문 생성
+        // 2) 새로운 Receipt 생성 (Order는 아직 생성하지 않음)
         developer.log(
-          'Creating new order for storeId=$storeId, tableId=$tableId',
+          'Creating new receipt for storeId=$storeId, tableId=$tableId',
           name: 'OrderStatusViewModel',
         );
-        _order = await _service.createOrder(
+        final newReceipt = await _service.createReceipt(
           storeId: storeId,
           tableId: tableId,
         );
         developer.log(
-          'New order created: ${_order.id}',
+          'New receipt created: ${newReceipt.id}',
           name: 'OrderStatusViewModel',
         );
-        _receiptId = _order.id;
+        // receiptId만 저장, Order는 생성하지 않음
+        _receiptId = newReceipt.id;
+        _order = const Order(id: "0", storeId: "", tableId: "", totalPrice: 0, menus: []);
       }
     } catch (e) {
       developer.log(
-        'Error in initializeOrderForTable: $e',
+        'Error in initializeReceipt: $e',
         name: 'OrderStatusViewModel',
       );
-      _order = const Order(
-        id: "0",
-        storeId: "",
-        tableId: "",
-        totalPrice: 0,
-        menus: [],
-      );
+      _receiptId = null;
+      _order = const Order(id: "0", storeId: "", tableId: "", totalPrice: 0, menus: []);
       rethrow;
     } finally {
       _loading = false;
@@ -153,14 +153,9 @@ class OrderStatusViewModel extends ChangeNotifier {
 
     try {
       _order = await _service.getOrder(receiptId);
+      _handleReceiptStatus(_order);
     } catch (e) {
-      _order = const Order(
-        id: "0",
-        storeId: "",
-        tableId: "",
-        totalPrice: 0,
-        menus: [],
-      );
+      _order = const Order(id: "0", storeId: "", tableId: "", totalPrice: 0, menus: []);
     } finally {
       _loading = false;
       notifyListeners();
@@ -173,6 +168,7 @@ class OrderStatusViewModel extends ChangeNotifier {
     try {
       final latest = await _service.getOrder(_receiptId!);
       _order = latest;
+      _handleReceiptStatus(latest);
       notifyListeners();
     } catch (_) {}
   }
@@ -194,6 +190,7 @@ class OrderStatusViewModel extends ChangeNotifier {
 
       _order = existingOrder;
       _receiptId = existingOrder.id;
+      _handleReceiptStatus(existingOrder);
       notifyListeners();
       return true;
     } catch (e) {
@@ -230,5 +227,13 @@ class OrderStatusViewModel extends ChangeNotifier {
       // 최신 상태 갱신
       await refresh();
     } catch (_) {}
+  }
+
+  void _handleReceiptStatus(Order latest) {
+    if (latest.status.isPaid) {
+      _receiptId = null;
+    } else {
+      _receiptId ??= latest.id;
+    }
   }
 }

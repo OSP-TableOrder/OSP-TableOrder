@@ -26,7 +26,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
   late TextEditingController priceController;
   late TextEditingController descriptionController;
 
-  late int stock;
   late bool isSoldOut;
   late bool isActive;
   late String? selectedCategoryId;
@@ -48,7 +47,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
       text: widget.product.description,
     );
 
-    stock = widget.product.stock;
     isSoldOut = widget.product.isSoldOut;
     isActive = widget.product.isActive;
     selectedCategoryId = widget.product.categoryId;
@@ -96,7 +94,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
         categoryId: selectedCategoryId ?? '',
         name: nameController.text.trim(),
         price: priceController.text.trim(),
-        stock: stock,
         isSoldOut: isSoldOut,
         isActive: isActive,
         description: descriptionController.text.trim(),
@@ -238,36 +235,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
                   labelText: "가격",
                   labelStyle: labelStyle,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("재고 수량", style: labelStyle),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline),
-                        onPressed: () {
-                          setState(() {
-                            if (stock > 0) stock--;
-                          });
-                        },
-                      ),
-                      Text(
-                        "$stock",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () => setState(() => stock++),
-                      ),
-                    ],
-                  ),
-                ],
               ),
               const SizedBox(height: 16),
               Row(

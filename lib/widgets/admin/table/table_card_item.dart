@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:table_order/models/admin/table_order_info.dart';
 
@@ -12,14 +11,26 @@ class TableCardItem extends StatefulWidget {
   State<TableCardItem> createState() => _TableCardItemState();
 }
 
-class _TableCardItemState extends State<TableCardItem> {
-  // 오버레이 색상을 제어하기 위한 변수
-  Color _overlayColor = Colors.transparent;
-  Timer? _blinkTimer;
+class _TableCardItemState extends State<TableCardItem>
+    with SingleTickerProviderStateMixin {
+  // 현재 오버레이 상태
+  Color? _currentOverlayColor;
+  late final AnimationController _overlayController;
+  late final Animation<double> _overlayOpacity;
 
   @override
   void initState() {
     super.initState();
+    _overlayController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    _overlayOpacity = Tween<double>(begin: 0.35, end: 0.9).animate(
+      CurvedAnimation(
+        parent: _overlayController,
+        curve: Curves.easeInOut,
+      ),
+    );
     _updateBlinkState();
   }
 
@@ -30,60 +41,65 @@ class _TableCardItemState extends State<TableCardItem> {
   }
 
   void _updateBlinkState() {
-    _blinkTimer?.cancel();
     if (!mounted) return;
 
+    // 테이블의 어떤 주문이라도 신규 주문이 있으면 깜빡임
+    final hasNewOrderInAnyOrders =
+        widget.table.orders.any((order) => order.hasNewOrder);
+    bool overlayChanged = false;
+
     // 1. 신규 주문 깜빡임 (파란색 계열 오버레이)
-    if (widget.table.hasNewOrder) {
-      _blinkTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-        if (!mounted) return;
-        setState(() {
-          // 투명도 0.7 <-> 0.3 반복
-          _overlayColor = (_overlayColor == Colors.blue.withValues(alpha: 0.7))
-              ? Colors.blue.withValues(alpha: 0.3)
-              : Colors.blue.withValues(alpha: 0.7);
-        });
-      });
-      return;
+    if (hasNewOrderInAnyOrders) {
+      if (_currentOverlayColor != Colors.blue) {
+        _currentOverlayColor = Colors.blue;
+        overlayChanged = true;
+      }
+      _startOverlayAnimation();
     }
-
     // 2. 직원 호출 깜빡임 (주황색 계열 오버레이)
-    if (widget.table.hasCallRequest) {
-      _blinkTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-        if (!mounted) return;
-        setState(() {
-          // 투명도 0.7 <-> 0.3 반복
-          _overlayColor =
-              (_overlayColor == Colors.orange.withValues(alpha: 0.7))
-              ? Colors.orange.withValues(alpha: 0.3)
-              : Colors.orange.withValues(alpha: 0.7);
-        });
-      });
-      return;
+    else if (widget.table.hasCallRequest) {
+      if (_currentOverlayColor != Colors.orange) {
+        _currentOverlayColor = Colors.orange;
+        overlayChanged = true;
+      }
+      _startOverlayAnimation();
+    } else {
+      if (_currentOverlayColor != null) {
+        overlayChanged = true;
+      }
+      _currentOverlayColor = null;
+      _overlayController.stop();
+      _overlayController.value = 0.0;
     }
 
-    // 3. 알림이 없을 땐 오버레이 투명
-    _overlayColor = Colors.transparent;
-    setState(() {});
+    if (overlayChanged) {
+      setState(() {});
+    }
+  }
+
+  void _startOverlayAnimation() {
+    if (!_overlayController.isAnimating) {
+      _overlayController.repeat(reverse: true);
+    }
   }
 
   @override
   void dispose() {
-    _blinkTimer?.cancel();
+    _overlayController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // 테이블의 모든 주문에서 메뉴 항목들 수집
+    // 테이블의 모든 주문에서 메뉴 항목들 수집 (표시용)
     final allItems = <dynamic>[];
     for (final order in widget.table.orders) {
       allItems.addAll(order.items);
     }
 
     final bool hasOrder = allItems.isNotEmpty;
-    final bool isNewOrder = widget.table.hasNewOrder;
-    final bool isCallRequest = widget.table.hasCallRequest;
+    // 테이블의 어떤 주문이라도 신규 주문이 있으면 true
+    final bool isNewOrder = widget.table.orders.any((order) => order.hasNewOrder);
     final bool isHighlighted = widget.table.orderStatus == OrderStatus.ordered;
 
     // 카드의 기본 배경색 (깜빡이지 않음)
@@ -141,29 +157,20 @@ class _TableCardItemState extends State<TableCardItem> {
               ),
             ),
 
-            // 2층: 신규 주문 오버레이 (전체 덮기 + 깜빡임)
-            if (isNewOrder)
+            // 2층: 신규 주문 또는 직원 호출 오버레이 (전체 덮기 + 깜빡임)
+            if (_currentOverlayColor != null)
               Positioned.fill(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 500),
-                  decoration: BoxDecoration(
-                    color: _overlayColor,
-                    borderRadius: BorderRadius.circular(9), // 테두리 두께 고려
+                child: FadeTransition(
+                  opacity: _overlayOpacity,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: _currentOverlayColor!.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: _buildOverlayText(
+                      isNewOrder ? "상품\n주문" : "직원\n호출",
+                    ),
                   ),
-                  child: _buildOverlayText("상품\n주문"),
-                ),
-              ),
-
-            // 3층: 직원 호출 오버레이 (전체 덮기 + 깜빡임)
-            if (isCallRequest)
-              Positioned.fill(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 500),
-                  decoration: BoxDecoration(
-                    color: _overlayColor,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: _buildOverlayText("직원\n호출"),
                 ),
               ),
           ],
