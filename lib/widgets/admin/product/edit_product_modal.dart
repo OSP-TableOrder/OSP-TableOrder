@@ -123,6 +123,12 @@ class _ProductEditModalState extends State<ProductEditModal> {
   Widget build(BuildContext context) {
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
+    // 선택된 카테고리가 유효한 카테고리 목록에 포함되어 있는지 확인
+    // 카테고리 ID가 없으면 '기타'로 취급
+    final isValidCategory = selectedCategoryId == null ||
+        categoryProvider.categories.any((c) => c.id == selectedCategoryId);
+    final effectiveValue = isValidCategory ? selectedCategoryId : null;
+
     return AlertDialog(
       backgroundColor: Colors.white,
       title: const Text(
@@ -136,11 +142,11 @@ class _ProductEditModalState extends State<ProductEditModal> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DropdownButtonFormField<String?>(
-                initialValue: selectedCategoryId,
+                initialValue: effectiveValue,
                 items: [
                   const DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('카테고리 없음'),
+                    child: Text('기타'),
                   ),
                   ...categoryProvider.categories
                       .map(
@@ -149,8 +155,8 @@ class _ProductEditModalState extends State<ProductEditModal> {
                 ],
                 onChanged: (v) => setState(() => selectedCategoryId = v),
                 decoration: InputDecoration(
-                  labelText: "카테고리 (선택사항)",
-                  helperText: "선택하지 않으면 카테고리 없이 수정됩니다",
+                  labelText: "카테고리",
+                  helperText: "기타를 선택하면 카테고리 없이 저장됩니다",
                   labelStyle: labelStyle,
                 ),
               ),
