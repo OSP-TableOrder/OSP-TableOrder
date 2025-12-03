@@ -19,7 +19,10 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
+  bool _isProcessing = false;
+
   Future<void> _showOrderConfirmDialog() async {
+    if (_isProcessing) return;
     final cartProvider = context.read<CartProvider>();
     final orderProvider = context.read<OrderStatusViewModel>();
     final appState = context.read<AppStateProvider>();
@@ -58,80 +61,92 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
 
-    bool orderPlaced = false;
+    // 모달 열기 전 처리 중 플래그 설정 (중복 요청 방지)
+    setState(() => _isProcessing = true);
 
-    await showConfirmModal(
-      context,
-      title: '주문을 완료하시겠어요?',
-      description: '장바구니에 담긴 메뉴를 주문에 추가합니다.',
-      cancelText: '취소',
-      actionText: '주문하기',
-      onActionAsync: () async {
-        try {
-          developer.log(
-            'Confirming order for tableId=$tableId (items=${cartItems.length})',
-            name: 'CartScreen',
-          );
-
-          // 1) Receipt 확보: 기존 영수증이 있으면 사용, 없으면 생성
-          // 이 단계에서는 Receipt만 생성/로드하고 Order는 아직 생성하지 않음
-          if (orderProvider.receiptId == null) {
-            await orderProvider.initializeReceipt(
-              storeId: storeId,
-              tableId: tableId,
-            );
-          }
-
-          if (orderProvider.receiptId == null) {
-            throw Exception('주문 생성에 실패했습니다.');
-          }
-
-          // 2) Order 생성: Receipt에 새로운 Order를 추가
-          // 첫 주문이든 추가 주문이든 항상 새로운 Order를 생성하여 Receipt.orders[]에 추가
-          await orderProvider.createOrder(storeId: storeId, tableId: tableId);
-
-          // 3) CartItem → OrderMenu 변환 후 주문에 추가
-          for (final cartItem in cartItems) {
-            final orderMenu = OrderMenu(
-              id: '',
-              status: OrderMenuStatus.ordered,
-              quantity: cartItem.quantity,
-              completedCount: 0,
-              menu: cartItem.menu,
-            );
-
+    try {
+      final confirmed = await showConfirmModal(
+        context,
+        title: '주문을 완료하시겠어요?',
+        description: '장바구니에 담긴 메뉴를 주문에 추가합니다.',
+        cancelText: '취소',
+        actionText: '주문하기',
+        onActionAsync: () async {
+          try {
             developer.log(
-              'Adding menu to current order: ${cartItem.menu.name} x ${cartItem.quantity}',
+              'Confirming order for tableId=$tableId (items=${cartItems.length})',
               name: 'CartScreen',
             );
-            await orderProvider.addMenu(orderMenu);
-          }
 
-          // 4) 장바구니 비우기 및 성공 플래그 설정
-          cartProvider.clear();
-          orderPlaced = true;
-          developer.log(
-            'Cart cleared after successful order',
-            name: 'CartScreen',
-          );
-        } catch (e) {
-          developer.log('Failed to submit order: $e', name: 'CartScreen');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('주문 처리 중 오류가 발생했습니다. 다시 시도해주세요.'),
-                backgroundColor: Colors.red,
-              ),
+            // 1) Receipt 확보: 기존 영수증이 있으면 사용, 없으면 생성
+            if (orderProvider.receiptId == null) {
+              await orderProvider.initializeReceipt(
+                storeId: storeId,
+                tableId: tableId,
+              );
+            }
+
+            if (orderProvider.receiptId == null) {
+              throw Exception('주문 생성에 실패했습니다.');
+            }
+
+            // 2) Order 생성
+            await orderProvider.createOrder(storeId: storeId, tableId: tableId);
+
+            // 3) CartItem → OrderMenu 변환 후 주문에 추가
+            for (final cartItem in cartItems) {
+              final orderMenu = OrderMenu(
+                id: '',
+                status: OrderMenuStatus.ordered,
+                quantity: cartItem.quantity,
+                completedCount: 0,
+                menu: cartItem.menu,
+              );
+
+              developer.log(
+                'Adding menu to current order: ${cartItem.menu.name} x ${cartItem.quantity}',
+                name: 'CartScreen',
+              );
+              await orderProvider.addMenu(orderMenu);
+            }
+
+            developer.log(
+              'Order submitted successfully',
+              name: 'CartScreen',
             );
+          } catch (e) {
+            developer.log('Failed to submit order: $e', name: 'CartScreen');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('주문 처리 중 오류가 발생했습니다. 다시 시도해주세요.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
-        }
-      },
-    );
+        },
+      );
 
-    if (orderPlaced && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('주문이 추가되었습니다!')));
+      if (confirmed == true && mounted) {
+        // 1) 즉시 장바구니 비우기
+        cartProvider.clear();
+
+        // 2) 성공 메시지 표시
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('주문이 추가되었습니다!')),
+        );
+
+        // 3) 즉시 메인 화면으로 이동
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      }
+    } finally {
+      // 모달 닫은 후 처리 중 플래그 해제
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
@@ -184,7 +199,7 @@ class _CartScreenState extends State<CartScreen> {
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: ElevatedButton(
-                onPressed: cartItems.isEmpty ? null : _showOrderConfirmDialog,
+                onPressed: (cartItems.isEmpty || _isProcessing) ? null : _showOrderConfirmDialog,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[500],
                   minimumSize: const Size(double.infinity, 56),
@@ -193,7 +208,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 child: Text(
-                  '${totalQuantity}개 주문하기',
+                  _isProcessing ? '주문 처리 중...' : '${totalQuantity}개 주문하기',
                   style: const TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),

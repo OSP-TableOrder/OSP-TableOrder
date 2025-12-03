@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:table_order/models/admin/table_order_info.dart';
+import 'package:table_order/provider/admin/order_provider.dart';
+import 'package:table_order/widgets/admin/order/add_order_modal.dart';
 import 'package:table_order/widgets/admin/order/edit_order_modal.dart';
 import 'package:table_order/widgets/admin/order/order_history_tab.dart';
 
@@ -74,13 +77,13 @@ class ReceiptModal extends StatelessWidget {
       return const Center(child: Text("수정할 주문이 없습니다."));
     }
 
-    // 여러 주문도 한 화면에서 모두 보여줌
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        children: [
-          for (int i = 0; i < table.orders.length; i++)
-            Padding(
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.only(bottom: 16),
+            itemCount: table.orders.length,
+            itemBuilder: (context, i) => Padding(
               padding: EdgeInsets.only(top: i == 0 ? 0 : 16),
               child: EditOrderModal(
                 tableIndex: tableIndex,
@@ -91,10 +94,135 @@ class ReceiptModal extends StatelessWidget {
                 orderLabel: table.orders[i].orderTime != null
                     ? "${table.orders[i].orderTime} 주문"
                     : "주문 ${i + 1}",
+                showActionButtons: false,
               ),
             ),
+          ),
+        ),
+        _buildActionButtons(context),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context) {
+    if (table.orders.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    const int targetOrderIndex = 0; // 항상 가장 최근 주문에 메뉴 추가/정산
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () async {
+                final provider = context.read<OrderProvider>();
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+                final success = await provider.settleReceipt(
+                  tableIndex,
+                  targetOrderIndex,
+                );
+
+                if (!navigator.mounted) return;
+
+                if (success) {
+                  if (storeId != null && storeId!.isNotEmpty) {
+                    await provider.loadTables(storeId!);
+                  }
+                  navigator.pop();
+                } else {
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(content: Text('정산 처리에 실패했습니다.')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[200],
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text(
+                "정산",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => _handleAddMenu(context, targetOrderIndex),
+              icon: const Icon(Icons.add),
+              label: const Text(
+                "메뉴 추가",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff2d7ff9),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _handleAddMenu(BuildContext context, int orderIndex) async {
+    if (storeId == null || storeId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('가게 정보가 없습니다.')),
+      );
+      return;
+    }
+
+    final List<Map<String, dynamic>>? result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddOrderModal(
+        storeId: storeId,
+      ),
+    );
+
+    if (result == null || result.isEmpty) return;
+
+    final provider = context.read<OrderProvider>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    for (final menuData in result) {
+      try {
+        final menu = menuData['menu'] as Map<String, dynamic>;
+        final quantity = menuData['quantity'] as int? ?? 1;
+
+        await provider.addMenuToReceipt(
+          tableIndex: tableIndex,
+          orderIndex: orderIndex,
+          menuData: {
+            ...menu,
+            'quantity': quantity,
+          },
+        );
+      } catch (e) {
+        final menuName = (menuData['menu'] as Map<String, dynamic>?)?['name'] ?? '메뉴';
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('메뉴 추가 실패: $menuName')),
+        );
+      }
+    }
+
+    scaffoldMessenger.showSnackBar(
+      SnackBar(content: Text('${result.length}개 메뉴가 추가되었습니다.')),
     );
   }
 }

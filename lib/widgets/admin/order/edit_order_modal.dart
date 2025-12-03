@@ -14,6 +14,7 @@ class EditOrderModal extends StatefulWidget {
   final String? storeId;
   final bool showOrderHeader;
   final String? orderLabel;
+  final bool showActionButtons;
 
   const EditOrderModal({
     super.key,
@@ -23,6 +24,7 @@ class EditOrderModal extends StatefulWidget {
     this.storeId,
     this.showOrderHeader = false,
     this.orderLabel,
+    this.showActionButtons = true,
   });
 
   @override
@@ -330,70 +332,70 @@ class _EditOrderModalState extends State<EditOrderModal> {
                 ),
         ),
 
-        // 하단 버튼 영역 (정산, 메뉴 추가)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Row(
-            children: [
-              // 정산 버튼
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final provider = context.read<OrderProvider>();
-                    final navigator = Navigator.of(context);
-                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+        if (widget.showActionButtons)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Row(
+              children: [
+                // 정산 버튼
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final provider = context.read<OrderProvider>();
+                      final navigator = Navigator.of(context);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-                    final success = await provider.settleReceipt(widget.tableIndex, widget.orderIndex);
+                      final success = await provider.settleReceipt(widget.tableIndex, widget.orderIndex);
 
-                    if (!mounted) return;
-                    if (success) {
-                      // 정산 완료 후 테이블 목록 새로고침
-                      await provider.loadTables(widget.storeId ?? '');
-                      // receipt_modal과 edit_order_modal을 모두 닫기
-                      navigator.pop(); // edit_order_modal 닫기
-                    } else {
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(content: Text('정산 처리에 실패했습니다.')),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[200],
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      if (!mounted) return;
+                      if (success) {
+                        // 정산 완료 후 테이블 목록 새로고침
+                        await provider.loadTables(widget.storeId ?? '');
+                        // receipt_modal과 edit_order_modal을 모두 닫기
+                        navigator.pop(); // edit_order_modal 닫기
+                      } else {
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(content: Text('정산 처리에 실패했습니다.')),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[200],
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    "정산",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    child: const Text(
+                      "정산",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              // 메뉴 추가하기 버튼
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _openMenuSelectionModal,
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    "메뉴 추가",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff2d7ff9),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 12),
+                // 메뉴 추가하기 버튼
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _openMenuSelectionModal,
+                    icon: const Icon(Icons.add),
+                    label: const Text(
+                      "메뉴 추가",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff2d7ff9),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }

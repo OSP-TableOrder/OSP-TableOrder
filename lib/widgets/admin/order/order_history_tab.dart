@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_order/models/admin/table_order_info.dart';
+import 'package:table_order/utils/won_formatter.dart';
 import 'package:table_order/models/common/order_menu_status.dart';
 
 class OrderHistoryTab extends StatelessWidget {
@@ -148,7 +149,7 @@ class OrderHistoryTab extends StatelessWidget {
                             Expanded(
                               flex: 2,
                               child: Text(
-                                "$total원",
+                                formatWon(total),
                                 textAlign: TextAlign.right,
                                 style: const TextStyle(fontSize: 16),
                               ),
@@ -204,7 +205,7 @@ class OrderHistoryTab extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  "${table.totalPrice}원",
+                  formatWon(table.totalPrice),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

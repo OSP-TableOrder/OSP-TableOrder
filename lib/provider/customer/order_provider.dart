@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 
 import 'package:table_order/models/customer/order.dart';
 import 'package:table_order/models/customer/order_menu.dart';
+import 'package:table_order/models/common/order_menu_status.dart';
 import 'package:table_order/service/customer/order_service.dart';
 
 class OrderStatusViewModel extends ChangeNotifier {
@@ -209,10 +211,23 @@ class OrderStatusViewModel extends ChangeNotifier {
     }
 
     try {
+      // 1) 서버에 메뉴 추가
       await _service.addMenu(orderId: _receiptId!, menu: menu);
 
-      // 서버 변경사항 반영
-      await refresh();
+      // 2) 로컬 상태 즉시 업데이트 (UI 반응성 향상)
+      final updatedMenus = [..._order.menus, menu];
+      int newTotalPrice = updatedMenus.fold<int>(
+        0,
+        (sum, item) => sum + (item.menu.price * item.quantity),
+      );
+      _order = _order.copyWith(
+        menus: updatedMenus,
+        totalPrice: newTotalPrice,
+      );
+      notifyListeners();
+
+      // 3) 백그라운드에서 서버 동기화 (느린 작업)
+      unawaited(refresh());
     } catch (e) {
       developer.log('Error adding menu: $e', name: 'OrderStatusViewModel');
     }
@@ -222,10 +237,29 @@ class OrderStatusViewModel extends ChangeNotifier {
     if (_receiptId == null) return;
 
     try {
+      // 1) 서버에서 메뉴 취소
       await _service.cancelMenu(orderId: _receiptId!, menuId: menuId);
 
-      // 최신 상태 갱신
-      await refresh();
+      // 2) 로컬 상태 즉시 업데이트 (UI 반응성 향상)
+      final updatedMenus = _order.menus
+          .map((menu) =>
+              menu.id == menuId ? menu.copyWith(status: OrderMenuStatus.canceled) : menu)
+          .toList();
+
+      int newTotalPrice = updatedMenus.fold<int>(
+        0,
+        (sum, item) =>
+            item.status == OrderMenuStatus.canceled ? sum : sum + (item.menu.price * item.quantity),
+      );
+
+      _order = _order.copyWith(
+        menus: updatedMenus,
+        totalPrice: newTotalPrice,
+      );
+      notifyListeners();
+
+      // 3) 백그라운드에서 서버 동기화 (느린 작업)
+      unawaited(refresh());
     } catch (_) {}
   }
 

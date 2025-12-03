@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 Future<bool?> showConfirmModal(
@@ -26,13 +27,15 @@ Future<bool?> showConfirmModal(
                 setState(() => isProcessing = true);
                 final dialogContext = context;
                 try {
-                  if (onActionAsync != null) {
-                    await onActionAsync();
-                  }
-
                   if (!dialogContext.mounted) return;
 
+                  // 모달 즉시 닫기
                   Navigator.of(dialogContext).pop(true);
+
+                  // 백그라운드에서 비동기 작업 실행
+                  if (onActionAsync != null) {
+                    unawaited(onActionAsync());
+                  }
                 } finally {
                   if (dialogContext.mounted) {
                     setState(() => isProcessing = false);

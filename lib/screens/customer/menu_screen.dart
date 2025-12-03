@@ -40,6 +40,7 @@ class _MenuScreenState extends State<MenuScreen> {
   String? _selectedCategoryId; // categoryId 기반 선택 상태
   String? _manuallySelectedCategoryId; // 사용자가 수동으로 선택한 카테고리
   bool _isScrolling = false; // 스크롤 애니메이션 진행 중 플래그
+  bool _isNavigating = false; // 네비게이션 중복 방지 플래그
   static const double _categoryBarHeight = 60;
   static const double _defaultStoreHeaderHeight = 220;
   static const double _defaultCategoryHeaderHeight = 50;
@@ -113,20 +114,28 @@ class _MenuScreenState extends State<MenuScreen> {
     String? storeId,
     String? tableId,
   ) async {
-    final receiptId = await _ensureReceiptId(
-      context,
-      orderProvider,
-      storeId,
-      tableId,
-    );
-    if (receiptId == null || !context.mounted) return;
+    // 중복 네비게이션 방지
+    if (_isNavigating) return;
+    _isNavigating = true;
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OrderStatusScreen(receiptId: receiptId),
-      ),
-    );
+    try {
+      final receiptId = await _ensureReceiptId(
+        context,
+        orderProvider,
+        storeId,
+        tableId,
+      );
+      if (receiptId == null || !context.mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderStatusScreen(receiptId: receiptId),
+        ),
+      );
+    } finally {
+      _isNavigating = false;
+    }
   }
 
   Future<void> _showCallStaffDialog(
@@ -166,7 +175,13 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   void _navigateToCart(BuildContext context) {
-    Navigator.pushNamed(context, AppRoutes.cart);
+    // 중복 네비게이션 방지
+    if (_isNavigating) return;
+    _isNavigating = true;
+
+    Navigator.pushNamed(context, AppRoutes.cart).then((_) {
+      _isNavigating = false;
+    });
   }
 
   Future<void> _scrollToCategoryId(String? categoryId) async {
@@ -174,16 +189,12 @@ class _MenuScreenState extends State<MenuScreen> {
 
     // Prevent duplicate scrolling while animation is in progress
     if (_isScrolling) {
-      debugPrint(
-        '[SCROLL] Already scrolling, ignoring category click: $categoryId',
-      );
       return;
     }
 
     // Mark that user manually selected this category
     _manuallySelectedCategoryId = categoryId;
     _isScrolling = true;
-    debugPrint('[SCROLL] User clicked category: $categoryId');
 
     final menuProvider = context.read<MenuProvider>();
     final displayList = menuProvider.displayList;
@@ -203,7 +214,6 @@ class _MenuScreenState extends State<MenuScreen> {
     }
 
     if (targetIndex == -1) {
-      debugPrint('Category $categoryId not found in displayList');
       _isScrolling = false;
       return;
     }
@@ -221,8 +231,6 @@ class _MenuScreenState extends State<MenuScreen> {
           final offsetToReveal = viewport.getOffsetToReveal(renderBox, 0);
           final targetRenderOffset = offsetToReveal.offset;
 
-          debugPrint('[SCROLL] GlobalKey offset: raw=$targetRenderOffset');
-
           final correctedTargetOffset = (targetRenderOffset - pinnedAdjustment)
               .clamp(
                 _scrollController.position.minScrollExtent,
@@ -231,9 +239,6 @@ class _MenuScreenState extends State<MenuScreen> {
 
           if (!mounted || !_scrollController.hasClients) return;
 
-          debugPrint(
-            '[SCROLL] Animating to rendered category $categoryId at offset $correctedTargetOffset (raw: $targetRenderOffset, adjust: $pinnedAdjustment)',
-          );
           await _scrollController.animateTo(
             correctedTargetOffset,
             duration: const Duration(milliseconds: 200),
@@ -248,18 +253,11 @@ class _MenuScreenState extends State<MenuScreen> {
           // Clear manual selection flag after animation completes
           _manuallySelectedCategoryId = null;
           _isScrolling = false;
-          debugPrint(
-            '[SCROLL] Animation completed, flag cleared for $categoryId, selected category updated',
-          );
-
-          debugPrint(
-            'Successfully scrolled to category $categoryId (rendered)',
-          );
           return;
         }
       }
     } catch (e) {
-      debugPrint('GlobalKey lookup failed: $e');
+      // Silently continue to estimated offset if GlobalKey lookup fails
     }
 
     // 즉시 estimated offset 사용 (재시도 안 함)
@@ -307,9 +305,6 @@ class _MenuScreenState extends State<MenuScreen> {
 
     if (!mounted || !_scrollController.hasClients) return;
 
-    debugPrint(
-      '[SCROLL] Animating to estimated category $categoryId at offset $correctedEstimatedOffset (raw: $estimatedOffset, adjust: $pinnedAdjustment)',
-    );
     await _scrollController.animateTo(
       correctedEstimatedOffset,
       duration: const Duration(milliseconds: 200),
@@ -324,13 +319,6 @@ class _MenuScreenState extends State<MenuScreen> {
     // Clear manual selection flag after animation completes
     _manuallySelectedCategoryId = null;
     _isScrolling = false;
-    debugPrint(
-      '[SCROLL] Animation completed, flag cleared for $categoryId (estimated), selected category updated',
-    );
-
-    debugPrint(
-      'Successfully scrolled to category $categoryId (estimated offset: $estimatedOffset)',
-    );
   }
 
   void _handleScroll() {
@@ -339,15 +327,8 @@ class _MenuScreenState extends State<MenuScreen> {
     // Skip auto-selection if user manually selected a category recently
     // The flag will be cleared after the scroll animation completes
     if (_manuallySelectedCategoryId != null) {
-      debugPrint(
-        '[SCROLL] Auto-selection skipped, manual selection flag is set: $_manuallySelectedCategoryId',
-      );
       return;
     }
-
-    debugPrint(
-      '[SCROLL] Auto-selection executing at offset ${_scrollController.offset}',
-    );
 
     final currentOffset = _scrollController.offset;
     String? candidate;
@@ -365,18 +346,11 @@ class _MenuScreenState extends State<MenuScreen> {
       final viewport = RenderAbstractViewport.of(renderBox);
       final offset = viewport.getOffsetToReveal(renderBox, 0).offset;
 
-      debugPrint(
-        '[SCROLL] Category offset check: categoryId=$categoryId, revealOffset=$offset, currentOffset=$currentOffset',
-      );
-
       // 현재 스크롤 위치에 가장 가까운 카테고리 선택 (위 또는 아래)
       final distance = (offset - currentOffset).abs();
       if (distance < closestDistance) {
         candidate = categoryId;
         closestDistance = distance;
-        debugPrint(
-          '[SCROLL] Better candidate: categoryId=$categoryId, distance=$distance',
-        );
       }
     }
 

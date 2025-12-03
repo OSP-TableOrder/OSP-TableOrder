@@ -331,8 +331,7 @@ class OrderServer {
   static const String _collectionName = 'Receipts';
   final _OrdersRepository _ordersRepository = _OrdersRepository();
 
-  /// 새로운 주문 생성 (orderId는 Firestore에서 자동 생성)
-  /// 동시에 정규화된 Orders 컬렉션에도 Order 문서 생성
+  /// 새로운 영수증 생성 (orderId는 Firestore에서 자동 생성)
   Future<Order?> createOrder({
     required String storeId,
     required String tableId,
@@ -342,21 +341,9 @@ class OrderServer {
       final receiptId = _generateReceiptId(now);
       final docRef = _firestore.collection(_collectionName).doc(receiptId);
 
-      // 1) Orders 컬렉션에 먼저 생성 (정규화된 구조) - Order ID 획득
-      final order = await _ordersRepository.createOrder(
-        receiptId: receiptId,
-        storeId: storeId,
-        tableId: tableId,
-      );
-
-      if (order == null) {
-        developer.log('Failed to create order in Orders collection', name: 'OrderServer');
-        return null;
-      }
-
-      // 2) Receipts 컬렉션에 생성 (orders 배열 포함)
+      // Receipts 컬렉션에 생성 (orders 배열은 비어 있음)
       await docRef.set({
-        'orders': [order.id],  // Orders 컬렉션의 Order ID 배열 저장
+        'orders': <String>[],
         'storeId': storeId,
         'tableId': tableId,
         'totalPrice': 0,
@@ -627,64 +614,72 @@ class OrderServer {
       final data = snapshot.data();
       if (data == null) return null;
 
-      // Receipts에서 orderId 조회
-      final orderId = data['orderId'] as String?;
-      if (orderId == null) {
-        developer.log('orderId not found in receipt $receiptId', name: 'OrderServer');
+      final ordersArray = (data['orders'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (ordersArray.isEmpty) {
+        developer.log('No orders found in receipt $receiptId for cancellation', name: 'OrderServer');
         return null;
       }
 
-      // Orders 컬렉션에서 해당 menuId의 인덱스 찾기
-      final orderDoc = await _firestore
-          .collection('Orders')
-          .doc(orderId)
-          .get();
-
-      if (!orderDoc.exists) {
-        developer.log('Order $orderId not found', name: 'OrderServer');
-        return null;
-      }
-
-      final orderData = orderDoc.data() as Map<String, dynamic>;
-      final items = orderData['items'] as List<dynamic>? ?? [];
-
-      // menuId가 일치하는 항목 찾기 (주의: menuId는 OrderMenu의 ID, 메뉴 ID 아님)
-      // 현재 구조에서는 menuId를 직접 비교할 수 없음
-      // 대신 클라이언트에서 제공한 menuId로 Orders에서 항목 찾기
-      int itemIndex = -1;
-      for (int i = 0; i < items.length; i++) {
-        final item = items[i] as Map<String, dynamic>;
-        // menuId (주문 항목 ID가 아님)로 비교할 경우 추가 정보 필요
-        // 현재는 간단히 menuId를 검색
-        if (item['id'] == menuId) {
-          itemIndex = i;
-          break;
+      // 최신 Order부터 검색 (역순으로 순회)
+      for (int idx = ordersArray.length - 1; idx >= 0; idx--) {
+        final orderId = ordersArray[idx];
+        final orderDoc = await _firestore.collection('Orders').doc(orderId).get();
+        if (!orderDoc.exists) {
+          continue;
         }
+
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final items = orderData['items'] as List<dynamic>? ?? [];
+
+        int itemIndex = -1;
+        for (int i = 0; i < items.length; i++) {
+          final item = items[i] as Map<String, dynamic>;
+          if (item['menuId'] == menuId) {
+            itemIndex = i;
+            break;
+          }
+        }
+
+        if (itemIndex == -1) {
+          continue;
+        }
+
+        final canceledOrder = await _ordersRepository.cancelMenuItem(
+          orderId: orderId,
+          itemIndex: itemIndex,
+        );
+
+        if (canceledOrder == null) {
+          developer.log('Failed to cancel menu in order $orderId', name: 'OrderServer');
+          return null;
+        }
+
+        // Receipt의 totalPrice를 재계산 (모든 Order의 총합)
+        final allOrders = await _ordersRepository.findOrdersByReceiptId(receiptId);
+        int newTotalPrice = 0;
+        for (final order in allOrders) {
+          newTotalPrice += order.totalPrice;
+        }
+
+        await docRef.update({
+          'totalPrice': newTotalPrice,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        developer.log(
+          'Canceled menu in order $orderId: menuId=$menuId',
+          name: 'OrderServer',
+        );
+
+        return await findById(receiptId);
       }
 
-      if (itemIndex == -1) {
-        developer.log('Menu item $menuId not found in order $orderId', name: 'OrderServer');
-        return null;
-      }
-
-      // Orders 컬렉션에서 메뉴 취소
-      final canceledOrder = await _ordersRepository.cancelMenuItem(
-        orderId: orderId,
-        itemIndex: itemIndex,
-      );
-
-      if (canceledOrder == null) {
-        developer.log('Failed to cancel menu in order $orderId', name: 'OrderServer');
-        return null;
-      }
-
-      // Receipts는 최소 정보만 유지
-      await docRef.update({
-        'totalPrice': canceledOrder.totalPrice,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      return await findById(receiptId);
+      developer.log('Menu item $menuId not found in any order for receipt $receiptId', name: 'OrderServer');
+      return null;
     } catch (e) {
       developer.log('Error canceling menu: $e', name: 'OrderServer');
       return null;
@@ -826,11 +821,13 @@ class OrderServer {
       }
     }
 
+    final calculatedTotal = _calculateTotalPriceFromMenus(aggregatedMenus);
+
     return Order(
       id: receiptId,
       storeId: data['storeId'] as String? ?? '',
       tableId: data['tableId'] as String? ?? '',
-      totalPrice: totalPrice,
+      totalPrice: calculatedTotal,
       menus: aggregatedMenus,
       status: status,
       createdAt: createdAt,
@@ -843,5 +840,14 @@ class OrderServer {
     final millis = local.millisecond.toString().padLeft(3, '0');
     return '${local.year}${two(local.month)}${two(local.day)}'
         '${two(local.hour)}${two(local.minute)}${two(local.second)}$millis';
+  }
+
+  int _calculateTotalPriceFromMenus(List<OrderMenu> menus) {
+    int total = 0;
+    for (final menu in menus) {
+      if (menu.status == OrderMenuStatus.canceled) continue;
+      total += menu.menu.price * menu.quantity;
+    }
+    return total;
   }
 }
