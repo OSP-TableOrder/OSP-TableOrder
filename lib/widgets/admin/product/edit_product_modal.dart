@@ -64,9 +64,9 @@ class _ProductEditModalState extends State<ProductEditModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('이미지 선택 실패: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('이미지 선택 실패: $e')));
       }
     }
   }
@@ -108,10 +108,7 @@ class _ProductEditModalState extends State<ProductEditModal> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('상품 수정 실패: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('상품 수정 실패: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -125,7 +122,8 @@ class _ProductEditModalState extends State<ProductEditModal> {
 
     // 선택된 카테고리가 유효한 카테고리 목록에 포함되어 있는지 확인
     // 카테고리 ID가 없으면 '기타'로 취급
-    final isValidCategory = selectedCategoryId == null ||
+    final isValidCategory =
+        selectedCategoryId == null ||
         categoryProvider.categories.any((c) => c.id == selectedCategoryId);
     final effectiveValue = isValidCategory ? selectedCategoryId : null;
 
@@ -148,10 +146,12 @@ class _ProductEditModalState extends State<ProductEditModal> {
                     value: null,
                     child: Text('기타'),
                   ),
-                  ...categoryProvider.categories
-                      .map(
-                        (c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name)),
-                      ),
+                  ...categoryProvider.categories.map(
+                    (c) => DropdownMenuItem<String?>(
+                      value: c.id,
+                      child: Text(c.name),
+                    ),
+                  ),
                 ],
                 onChanged: (v) => setState(() => selectedCategoryId = v),
                 decoration: InputDecoration(
@@ -174,55 +174,56 @@ class _ProductEditModalState extends State<ProductEditModal> {
                     color: Colors.grey[100],
                   ),
                   child: selectedImage == null
-                    ? (widget.product.imageUrl != null
-                        ? PlatformNetworkImage(
-                            imageUrl: widget.product.imageUrl!,
-                            fit: BoxFit.cover,
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.image_outlined,
-                                size: 40,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '이미지 변경',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            ],
-                          ))
-                    : Stack(
-                        children: [
-                          Image.file(
-                            selectedImage!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: GestureDetector(
-                              onTap: () => setState(() => selectedImage = null),
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                padding: const EdgeInsets.all(4),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 16,
+                      ? (widget.product.imageUrl != null
+                            ? PlatformNetworkImage(
+                                imageUrl: widget.product.imageUrl!,
+                                fit: BoxFit.cover,
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.image_outlined,
+                                    size: 40,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '이미지 변경',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ))
+                      : Stack(
+                          children: [
+                            Image.file(
+                              selectedImage!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => selectedImage = null),
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(4),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                    ],
-                  ),
+                          ],
+                        ),
                 ),
               ),
               const SizedBox(height: 16),

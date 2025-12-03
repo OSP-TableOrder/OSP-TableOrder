@@ -43,9 +43,9 @@ class _ProductAddModalState extends State<ProductAddModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('이미지 선택 실패: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('이미지 선택 실패: $e')));
       }
     }
   }
@@ -53,17 +53,17 @@ class _ProductAddModalState extends State<ProductAddModal> {
   Future<void> _submitProduct() async {
     // 상품명 필수 검증
     if (nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('상품명을 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('상품명을 입력해주세요.')));
       return;
     }
 
     // 가격 필수 검증
     if (priceController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('가격을 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('가격을 입력해주세요.')));
       return;
     }
 
@@ -103,10 +103,7 @@ class _ProductAddModalState extends State<ProductAddModal> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('상품 추가 실패: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('상품 추가 실패: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -130,26 +127,26 @@ class _ProductAddModalState extends State<ProductAddModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            DropdownButtonFormField<String?>(
-              initialValue: selectedCategoryId,
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('카테고리 없음'),
-                ),
-                ...categories.map(
-                  (c) => DropdownMenuItem<String?>(
-                    value: c.id,
-                    child: Text(c.name),
+              DropdownButtonFormField<String?>(
+                initialValue: selectedCategoryId,
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('카테고리 없음'),
                   ),
+                  ...categories.map(
+                    (c) => DropdownMenuItem<String?>(
+                      value: c.id,
+                      child: Text(c.name),
+                    ),
+                  ),
+                ],
+                onChanged: (v) => setState(() => selectedCategoryId = v),
+                decoration: const InputDecoration(
+                  labelText: "카테고리 (선택사항)",
+                  helperText: "선택하지 않으면 카테고리 없이 추가됩니다",
                 ),
-              ],
-              onChanged: (v) => setState(() => selectedCategoryId = v),
-              decoration: const InputDecoration(
-                labelText: "카테고리 (선택사항)",
-                helperText: "선택하지 않으면 카테고리 없이 추가됩니다",
               ),
-            ),
 
               const SizedBox(height: 16),
               // 이미지 선택
@@ -191,7 +188,8 @@ class _ProductAddModalState extends State<ProductAddModal> {
                               top: 4,
                               right: 4,
                               child: GestureDetector(
-                                onTap: () => setState(() => selectedImage = null),
+                                onTap: () =>
+                                    setState(() => selectedImage = null),
                                 child: Container(
                                   decoration: const BoxDecoration(
                                     color: Colors.red,
@@ -223,6 +221,8 @@ class _ProductAddModalState extends State<ProductAddModal> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: "가격"),
               ),
+
+              const SizedBox(height: 16),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

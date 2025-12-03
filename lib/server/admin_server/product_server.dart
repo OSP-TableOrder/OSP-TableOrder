@@ -10,15 +10,19 @@ class ProductServer {
   /// 모든 Product 조회
   Future<List<Product>> fetchProducts() async {
     try {
-      final CollectionReference collectionRef =
-          _firestore.collection(_collectionName);
+      final CollectionReference collectionRef = _firestore.collection(
+        _collectionName,
+      );
 
       return await collectionRef.get().then((QuerySnapshot snapshot) {
         List<QueryDocumentSnapshot> list = snapshot.docs;
         List<Product> products = [];
 
         for (var doc in list) {
-          final product = _parseProduct(doc.id, doc.data() as Map<String, dynamic>?);
+          final product = _parseProduct(
+            doc.id,
+            doc.data() as Map<String, dynamic>?,
+          );
           if (product != null) {
             products.add(product);
           }
@@ -33,7 +37,9 @@ class ProductServer {
   }
 
   /// 특정 가게의 Product 목록 조회 (메뉴 추가 시 사용)
-  Future<List<Map<String, dynamic>>> fetchProductsByStore(String storeId) async {
+  Future<List<Map<String, dynamic>>> fetchProductsByStore(
+    String storeId,
+  ) async {
     try {
       developer.log(
         'Fetching products for storeId=$storeId',
@@ -58,7 +64,9 @@ class ProductServer {
         products.add({
           'id': doc.id,
           'name': data['name'] ?? '미정의',
-          'price': (data['price'] is int) ? data['price'] : int.tryParse(data['price']?.toString() ?? '0') ?? 0,
+          'price': (data['price'] is int)
+              ? data['price']
+              : int.tryParse(data['price']?.toString() ?? '0') ?? 0,
           'categoryId': data['categoryId'],
           'categoryName': data['categoryName'] ?? '기타',
         });
@@ -82,8 +90,9 @@ class ProductServer {
   /// Product 추가
   Future<String> addProduct(Product p) async {
     try {
-      final CollectionReference collectionRef =
-          _firestore.collection(_collectionName);
+      final CollectionReference collectionRef = _firestore.collection(
+        _collectionName,
+      );
 
       // Firestore 자동 생성 ID 사용
       final newDocRef = collectionRef.doc();
@@ -98,8 +107,9 @@ class ProductServer {
   /// Product 업데이트
   Future<void> updateProduct(String id, Product updated) async {
     try {
-      final CollectionReference collectionRef =
-          _firestore.collection(_collectionName);
+      final CollectionReference collectionRef = _firestore.collection(
+        _collectionName,
+      );
       final DocumentReference docRef = collectionRef.doc(id);
 
       await docRef.update(_productToMap(updated));
@@ -111,8 +121,9 @@ class ProductServer {
   /// Product 삭제
   Future<void> deleteProduct(String id) async {
     try {
-      final CollectionReference collectionRef =
-          _firestore.collection(_collectionName);
+      final CollectionReference collectionRef = _firestore.collection(
+        _collectionName,
+      );
       final DocumentReference docRef = collectionRef.doc(id);
 
       await docRef.delete();
@@ -141,7 +152,9 @@ class ProductServer {
 
     try {
       final storeId = data['storeId'];
-      final storeIdStr = storeId is int ? storeId.toString() : (storeId as String? ?? '');
+      final storeIdStr = storeId is int
+          ? storeId.toString()
+          : (storeId as String? ?? '');
 
       return Product(
         id: id,
