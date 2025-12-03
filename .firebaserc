@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "kit-osp-25-2-toss-place"
+  },
+  "hosting": {
+    "site": "toss",
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "predeploy": [
+      "npm run build"
+    ]
+  }
+}
