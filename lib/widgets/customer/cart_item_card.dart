@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_order/models/customer/cart_item.dart';
+import 'package:table_order/widgets/common/platform_network_image.dart';
 
 class CartItemCard extends StatelessWidget {
   final CartItem item;
@@ -27,22 +28,17 @@ class CartItemCard extends StatelessWidget {
                   height: 80,
                   color: Colors.grey[200],
                   child: item.menu.imageUrl != null
-                      ? Image.network(
-                          item.menu.imageUrl!,
+                      ? PlatformNetworkImage(
+                          imageUrl: item.menu.imageUrl!,
                           fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.restaurant,
-                              color: Colors.grey,
-                              size: 40,
-                            );
-                          },
+                          placeholder: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          errorWidget: const Icon(
+                            Icons.restaurant,
+                            color: Colors.grey,
+                            size: 40,
+                          ),
                         )
                       : const Icon(
                           Icons.restaurant,

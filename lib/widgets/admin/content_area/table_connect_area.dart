@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_order/provider/admin/login_provider.dart';
-import 'package:table_order/provider/admin/table_connect_provider.dart';
-import 'package:table_order/provider/admin/table_order_provider.dart';
+import 'package:table_order/provider/admin/store_provider.dart';
+import 'package:table_order/provider/admin/order_provider.dart';
 import 'package:table_order/widgets/admin/qr/qr_dialog.dart';
 import 'package:table_order/widgets/admin/table/add_table_modal.dart';
 
@@ -21,14 +21,14 @@ class _TableConnectAreaState extends State<TableConnectArea> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final storeId = context.read<LoginProvider>().storeId;
       if (storeId != null) {
-        context.read<TableConnectProvider>().loadTables(storeId.toString());
+        context.read<StoreProvider>().loadStoreData(storeId.toString());
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TableConnectProvider>();
+    final provider = context.watch<StoreProvider>();
     final tables = provider.tables;
 
     return Container(
@@ -68,7 +68,7 @@ class _TableConnectAreaState extends State<TableConnectArea> {
                         // 홈 화면 목록 갱신
                         if (context.mounted) {
                           await context
-                              .read<TableOrderProvider>()
+                              .read<OrderProvider>()
                               .loadTables(storeId.toString());
                         }
                       },
@@ -90,7 +90,7 @@ class _TableConnectAreaState extends State<TableConnectArea> {
 
           // 테이블 리스트 그리드
           Expanded(
-            child: provider.isLoading
+            child: provider.loading
                 ? const Center(child: CircularProgressIndicator())
                 : GridView.builder(
                     gridDelegate:
@@ -196,7 +196,7 @@ class _TableConnectAreaState extends State<TableConnectArea> {
                                       // 홈 화면 목록 갱신
                                       if (context.mounted) {
                                         await context
-                                            .read<TableOrderProvider>()
+                                            .read<OrderProvider>()
                                             .loadTables(storeId.toString());
                                       }
                                     },

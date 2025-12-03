@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:table_order/provider/admin/call_staff_provider.dart';
+import 'package:table_order/provider/admin/staff_request_provider.dart';
 import 'package:table_order/provider/admin/login_provider.dart';
-import 'package:table_order/provider/admin/order_log_provider.dart';
-import 'package:table_order/provider/admin/table_order_provider.dart';
+import 'package:table_order/provider/admin/order_log_provider.dart' as order_log;
+import 'package:table_order/provider/admin/order_provider.dart' as order_provider;
 
 import 'package:table_order/widgets/admin/panel/call_staff_panel.dart';
 import 'package:table_order/widgets/admin/panel/order_notification_panel.dart';
@@ -80,7 +80,7 @@ class _AdminHeaderBarState extends State<AdminHeaderBar> {
     final storeId = context.read<LoginProvider>().storeId;
     if (storeId == null) return;
 
-    context.read<CallStaffProvider>().loadLogs(storeId);
+    context.read<StaffRequestProvider>().loadLogs(storeId);
 
     const panelWidth = 260.0;
 
@@ -92,13 +92,13 @@ class _AdminHeaderBarState extends State<AdminHeaderBar> {
         32;
 
     _callOverlayEntry = OverlayEntry(
-      builder: (_) => Consumer<CallStaffProvider>(
+      builder: (_) => Consumer<StaffRequestProvider>(
         builder: (_, provider, __) {
           return Positioned(
             left: left,
             top: top,
             child: CallStaffPanel(
-              callLogs: provider.callLogs,
+              callLogs: provider.logs,
               onClose: _closeCallPanel,
             ),
           );
@@ -118,8 +118,8 @@ class _AdminHeaderBarState extends State<AdminHeaderBar> {
   void _showOrderPanel() {
     if (_orderOverlayEntry != null) return;
 
-    final tables = context.read<TableOrderProvider>().tables;
-    context.read<OrderProvider>().loadOrderLogs(tables);
+    final tables = context.read<order_provider.OrderProvider>().tables;
+    context.read<order_log.OrderLogProvider>().loadOrderLogs(tables);
 
     const panelWidth = 260.0;
 
@@ -131,7 +131,7 @@ class _AdminHeaderBarState extends State<AdminHeaderBar> {
         32;
 
     _orderOverlayEntry = OverlayEntry(
-      builder: (_) => Consumer<OrderProvider>(
+      builder: (_) => Consumer<order_log.OrderLogProvider>(
         builder: (_, provider, __) {
           return Positioned(
             left: left,
