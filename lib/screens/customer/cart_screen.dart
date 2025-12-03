@@ -29,7 +29,10 @@ class _CartScreenState extends State<CartScreen> {
     final tableId = appState.tableId;
 
     // 총 수량 계산
-    final totalQuantity = cartItems.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalQuantity = cartItems.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
 
     if (storeId == null || storeId.isEmpty || tableId == null) {
       if (mounted) {
@@ -65,10 +68,12 @@ class _CartScreenState extends State<CartScreen> {
       actionText: '주문하기',
       onActionAsync: () async {
         try {
-          developer.log('Confirming order for tableId=$tableId (items=${cartItems.length})',
-              name: 'CartScreen');
+          developer.log(
+            'Confirming order for tableId=$tableId (items=${cartItems.length})',
+            name: 'CartScreen',
+          );
 
-          // 1) 기존 영수증이 있으면 사용, 없으면 생성
+          // 기존 영수증이 있으면 사용, 없으면 생성
           if (orderProvider.receiptId == null) {
             await orderProvider.initializeOrderForTable(
               storeId: storeId,
@@ -80,10 +85,10 @@ class _CartScreenState extends State<CartScreen> {
             throw Exception('주문 생성에 실패했습니다.');
           }
 
-          // 2) CartItem → OrderMenu 변환 후 주문에 추가
+          // CartItem → OrderMenu 변환 후 주문에 추가
           for (final cartItem in cartItems) {
             final orderMenu = OrderMenu(
-              id: '', // OrderServer에서 Firestore 자동 생성 ID로 설정됨
+              id: '',
               status: OrderMenuStatus.ordered,
               quantity: cartItem.quantity,
               completedCount: 0,
@@ -97,10 +102,13 @@ class _CartScreenState extends State<CartScreen> {
             await orderProvider.addMenu(orderMenu);
           }
 
-          // 3) 장바구니 비우기 및 성공 플래그 설정
+          // 장바구니 비우기 및 성공 플래그 설정
           cartProvider.clear();
           orderPlaced = true;
-          developer.log('Cart cleared after successful order', name: 'CartScreen');
+          developer.log(
+            'Cart cleared after successful order',
+            name: 'CartScreen',
+          );
         } catch (e) {
           developer.log('Failed to submit order: $e', name: 'CartScreen');
           if (mounted) {
@@ -116,9 +124,9 @@ class _CartScreenState extends State<CartScreen> {
     );
 
     if (orderPlaced && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('주문이 추가되었습니다!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('주문이 추가되었습니다!')));
     }
   }
 
@@ -126,7 +134,10 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     final cartProvider = context.watch<CartProvider>();
     final cartItems = cartProvider.items;
-    final totalPrice = cartProvider.totalPrice;
+    final totalQuantity = cartItems.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -149,16 +160,20 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     )
                   : ListView(
-                      children: cartItems
-                          .map(
-                            (item) => CartItemCard(
-                              item: item,
-                              onRemove: () {
-                                cartProvider.removeItem(item.id);
-                              },
-                            ),
-                          )
-                          .toList(),
+                      children: cartItems.map((item) {
+                        return CartItemCard(
+                          item: item,
+                          onRemove: () {
+                            cartProvider.removeItem(item.id);
+                          },
+                          onIncrement: () {
+                            cartProvider.incrementQuantity(item.id);
+                          },
+                          onDecrement: () {
+                            cartProvider.decrementQuantity(item.id);
+                          },
+                        );
+                      }).toList(),
                     ),
             ),
             Padding(
@@ -173,7 +188,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 child: Text(
-                  '${cartItems.length}개 주문하기 - $totalPrice원',
+                  '${totalQuantity}개 주문하기',
                   style: const TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
