@@ -25,7 +25,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
   late TextEditingController priceController;
   late TextEditingController descriptionController;
 
-  late int stock;
   late bool isSoldOut;
   late bool isActive;
   late String selectedCategoryId;
@@ -47,7 +46,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
       text: widget.product.description,
     );
 
-    stock = widget.product.stock;
     isSoldOut = widget.product.isSoldOut;
     isActive = widget.product.isActive;
     selectedCategoryId = widget.product.categoryId;
@@ -65,9 +63,9 @@ class _ProductEditModalState extends State<ProductEditModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('이미지 선택 실패: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('이미지 선택 실패: $e')));
       }
     }
   }
@@ -95,7 +93,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
         categoryId: selectedCategoryId,
         name: nameController.text.trim(),
         price: priceController.text.trim(),
-        stock: stock,
         isSoldOut: isSoldOut,
         isActive: isActive,
         description: descriptionController.text.trim(),
@@ -110,10 +107,7 @@ class _ProductEditModalState extends State<ProductEditModal> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('상품 수정 실패: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('상품 수정 실패: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -137,82 +131,83 @@ class _ProductEditModalState extends State<ProductEditModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            DropdownButtonFormField<String>(
-              initialValue: selectedCategoryId,
-              items: categoryProvider.categories
-                  .map(
-                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => selectedCategoryId = v!),
-              decoration: InputDecoration(
-                labelText: "카테고리",
-                labelStyle: labelStyle,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            // 이미지 선택
-            GestureDetector(
-              onTap: isUploading ? null : _pickImage,
-              child: Container(
-                height: 120,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
+              DropdownButtonFormField<String>(
+                initialValue: selectedCategoryId,
+                items: categoryProvider.categories
+                    .map(
+                      (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => selectedCategoryId = v!),
+                decoration: InputDecoration(
+                  labelText: "카테고리",
+                  labelStyle: labelStyle,
                 ),
-                child: selectedImage == null
-                    ? (widget.product.imageUrl != null
-                        ? Image.network(
-                            widget.product.imageUrl!,
-                            fit: BoxFit.cover,
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.image_outlined,
-                                size: 40,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '이미지 변경',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            ],
-                          ))
-                    : Stack(
-                        children: [
-                          Image.file(
-                            selectedImage!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: GestureDetector(
-                              onTap: () => setState(() => selectedImage = null),
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                padding: const EdgeInsets.all(4),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 16,
+              ),
+
+              const SizedBox(height: 16),
+              // 이미지 선택
+              GestureDetector(
+                onTap: isUploading ? null : _pickImage,
+                child: Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[100],
+                  ),
+                  child: selectedImage == null
+                      ? (widget.product.imageUrl != null
+                            ? Image.network(
+                                widget.product.imageUrl!,
+                                fit: BoxFit.cover,
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.image_outlined,
+                                    size: 40,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '이미지 변경',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ))
+                      : Stack(
+                          children: [
+                            Image.file(
+                              selectedImage!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => selectedImage = null),
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(4),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                    ],
-                  ),
+                          ],
+                        ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -236,46 +231,16 @@ class _ProductEditModalState extends State<ProductEditModal> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("재고 수량", style: labelStyle),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: () {
-                        setState(() {
-                          if (stock > 0) stock--;
-                        });
-                      },
-                    ),
-                    Text(
-                      "$stock",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: () => setState(() => stock++),
-                    ),
-                  ],
-                ),
-              ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
                   Text("품절 여부", style: labelStyle),
                   Switch(
                     value: isSoldOut,
-                  onChanged: (v) => setState(() => isSoldOut = v),
+                    onChanged: (v) => setState(() => isSoldOut = v),
 
-                  activeTrackColor: const Color(0xff2d7ff9),
-                  inactiveThumbColor: Colors.grey,
-                  inactiveTrackColor: Colors.black26,
-                ),
-              ],
+                    activeTrackColor: const Color(0xff2d7ff9),
+                    inactiveThumbColor: Colors.grey,
+                    inactiveTrackColor: Colors.black26,
+                  ),
+                ],
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -283,13 +248,13 @@ class _ProductEditModalState extends State<ProductEditModal> {
                   Text("노출 여부", style: labelStyle),
                   Switch(
                     value: isActive,
-                  onChanged: (v) => setState(() => isActive = v),
+                    onChanged: (v) => setState(() => isActive = v),
 
-                  activeTrackColor: const Color(0xff2d7ff9),
-                  inactiveThumbColor: Colors.grey,
-                  inactiveTrackColor: Colors.black26,
-                ),
-              ],
+                    activeTrackColor: const Color(0xff2d7ff9),
+                    inactiveThumbColor: Colors.grey,
+                    inactiveTrackColor: Colors.black26,
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               TextField(

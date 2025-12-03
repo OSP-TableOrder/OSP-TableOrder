@@ -21,7 +21,6 @@ class _ProductAddModalState extends State<ProductAddModal> {
   final TextEditingController priceController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
-  int stock = 0;
   bool isSoldOut = false;
   bool isActive = true;
   String? selectedCategoryId;
@@ -44,18 +43,18 @@ class _ProductAddModalState extends State<ProductAddModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('이미지 선택 실패: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('이미지 선택 실패: $e')));
       }
     }
   }
 
   Future<void> _submitProduct() async {
     if (selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('카테고리를 선택해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('카테고리를 선택해주세요.')));
       return;
     }
 
@@ -81,7 +80,6 @@ class _ProductAddModalState extends State<ProductAddModal> {
         categoryId: selectedCategoryId!,
         name: nameController.text.trim(),
         price: priceController.text.trim(),
-        stock: stock,
         isSoldOut: isSoldOut,
         isActive: isActive,
         description: descriptionController.text.trim(),
@@ -96,10 +94,7 @@ class _ProductAddModalState extends State<ProductAddModal> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('상품 추가 실패: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('상품 추가 실패: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -123,16 +118,16 @@ class _ProductAddModalState extends State<ProductAddModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            DropdownButtonFormField<String>(
-              initialValue: selectedCategoryId,
-              items: categories
-                  .map(
-                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => selectedCategoryId = v),
-              decoration: const InputDecoration(labelText: "카테고리"),
-            ),
+              DropdownButtonFormField<String>(
+                initialValue: selectedCategoryId,
+                items: categories
+                    .map(
+                      (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => selectedCategoryId = v),
+                decoration: const InputDecoration(labelText: "카테고리"),
+              ),
 
               const SizedBox(height: 16),
               // 이미지 선택
@@ -174,7 +169,8 @@ class _ProductAddModalState extends State<ProductAddModal> {
                               top: 4,
                               right: 4,
                               child: GestureDetector(
-                                onTap: () => setState(() => selectedImage = null),
+                                onTap: () =>
+                                    setState(() => selectedImage = null),
                                 child: Container(
                                   decoration: const BoxDecoration(
                                     color: Colors.red,
@@ -208,29 +204,6 @@ class _ProductAddModalState extends State<ProductAddModal> {
               ),
 
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("재고"),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            if (stock > 0) stock--;
-                          });
-                        },
-                        icon: const Icon(Icons.remove_circle_outline),
-                      ),
-                      Text("$stock"),
-                      IconButton(
-                        onPressed: () => setState(() => stock++),
-                        icon: const Icon(Icons.add_circle_outline),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
