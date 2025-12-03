@@ -5,6 +5,7 @@ import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/widgets/customer/quantity_control.dart';
 import 'package:table_order/widgets/customer/header_bar.dart';
 import 'package:table_order/provider/customer/cart_provider.dart';
+import 'package:table_order/widgets/common/platform_network_image.dart';
 
 class MenuDetailScreen extends StatefulWidget {
   final Menu item;
@@ -59,33 +60,17 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                       width: double.infinity,
                       color: Colors.grey[100],
                       child: widget.item.imageUrl != null
-                          ? Image.network(
-                              widget.item.imageUrl!,
+                          ? PlatformNetworkImage(
+                              imageUrl: widget.item.imageUrl!,
                               fit: BoxFit.cover,
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                      child: CircularProgressIndicator(
-                                        value:
-                                            loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  loadingProgress
-                                                      .expectedTotalBytes!
-                                            : null,
-                                      ),
-                                    );
-                                  },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(
-                                  Icons.restaurant,
-                                  size: 100,
-                                  color: Colors.grey[400],
-                                );
-                              },
+                              placeholder: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              errorWidget: Icon(
+                                Icons.restaurant,
+                                size: 100,
+                                color: Colors.grey[400],
+                              ),
                             )
                           : Icon(
                               Icons.restaurant,

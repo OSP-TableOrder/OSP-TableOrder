@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:table_order/models/admin/product.dart';
 import 'package:table_order/provider/admin/category_provider.dart';
 import 'package:table_order/service/admin/image_upload_service.dart';
+import 'package:table_order/widgets/common/platform_network_image.dart';
 
 class ProductEditModal extends StatefulWidget {
   final Product product; // Product 객체 그대로 받음
@@ -27,7 +28,7 @@ class _ProductEditModalState extends State<ProductEditModal> {
 
   late bool isSoldOut;
   late bool isActive;
-  late String selectedCategoryId;
+  late String? selectedCategoryId;
 
   File? selectedImage;
   bool isUploading = false;
@@ -90,7 +91,7 @@ class _ProductEditModalState extends State<ProductEditModal> {
       final updatedProduct = Product(
         id: widget.product.id,
         storeId: widget.product.storeId,
-        categoryId: selectedCategoryId,
+        categoryId: selectedCategoryId ?? '',
         name: nameController.text.trim(),
         price: priceController.text.trim(),
         isSoldOut: isSoldOut,
@@ -119,6 +120,13 @@ class _ProductEditModalState extends State<ProductEditModal> {
   Widget build(BuildContext context) {
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
+    // 선택된 카테고리가 유효한 카테고리 목록에 포함되어 있는지 확인
+    // 카테고리 ID가 없으면 '기타'로 취급
+    final isValidCategory =
+        selectedCategoryId == null ||
+        categoryProvider.categories.any((c) => c.id == selectedCategoryId);
+    final effectiveValue = isValidCategory ? selectedCategoryId : null;
+
     return AlertDialog(
       backgroundColor: Colors.white,
       title: const Text(
@@ -131,16 +139,24 @@ class _ProductEditModalState extends State<ProductEditModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DropdownButtonFormField<String>(
-                initialValue: selectedCategoryId,
-                items: categoryProvider.categories
-                    .map(
-                      (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => selectedCategoryId = v!),
+              DropdownButtonFormField<String?>(
+                initialValue: effectiveValue,
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('기타'),
+                  ),
+                  ...categoryProvider.categories.map(
+                    (c) => DropdownMenuItem<String?>(
+                      value: c.id,
+                      child: Text(c.name),
+                    ),
+                  ),
+                ],
+                onChanged: (v) => setState(() => selectedCategoryId = v),
                 decoration: InputDecoration(
                   labelText: "카테고리",
+                  helperText: "기타를 선택하면 카테고리 없이 저장됩니다",
                   labelStyle: labelStyle,
                 ),
               ),
@@ -159,8 +175,8 @@ class _ProductEditModalState extends State<ProductEditModal> {
                   ),
                   child: selectedImage == null
                       ? (widget.product.imageUrl != null
-                            ? Image.network(
-                                widget.product.imageUrl!,
+                            ? PlatformNetworkImage(
+                                imageUrl: widget.product.imageUrl!,
                                 fit: BoxFit.cover,
                               )
                             : Column(
@@ -235,7 +251,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
                   Switch(
                     value: isSoldOut,
                     onChanged: (v) => setState(() => isSoldOut = v),
-
                     activeTrackColor: const Color(0xff2d7ff9),
                     inactiveThumbColor: Colors.grey,
                     inactiveTrackColor: Colors.black26,
@@ -249,7 +264,6 @@ class _ProductEditModalState extends State<ProductEditModal> {
                   Switch(
                     value: isActive,
                     onChanged: (v) => setState(() => isActive = v),
-
                     activeTrackColor: const Color(0xff2d7ff9),
                     inactiveThumbColor: Colors.grey,
                     inactiveTrackColor: Colors.black26,

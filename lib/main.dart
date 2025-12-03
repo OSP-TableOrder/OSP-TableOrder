@@ -6,19 +6,19 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 import 'package:table_order/provider/app_state_provider.dart';
-import 'package:table_order/provider/admin/call_staff_provider.dart';
 import 'package:table_order/provider/admin/category_provider.dart';
 import 'package:table_order/provider/admin/login_provider.dart';
 import 'package:table_order/provider/admin/order_log_provider.dart' as admin_order;
 import 'package:table_order/provider/admin/product_provider.dart';
-import 'package:table_order/provider/admin/table_order_provider.dart';
-import 'package:table_order/provider/admin/table_connect_provider.dart';
-import 'package:table_order/provider/admin/store_info_provider.dart';
 import 'package:table_order/provider/admin/system_admin_provider.dart';
+import 'package:table_order/provider/admin/menu_provider.dart' as admin_menu;
+import 'package:table_order/provider/admin/store_provider.dart' as admin_store;
+import 'package:table_order/provider/admin/order_provider.dart' as admin_order_provider;
+import 'package:table_order/provider/admin/staff_request_provider.dart';
 
 import 'package:table_order/routes/app_routes.dart';
-import 'package:table_order/provider/customer/store_provider.dart';
-import 'package:table_order/provider/customer/menu_provider.dart';
+import 'package:table_order/provider/customer/store_provider.dart' as customer_store;
+import 'package:table_order/provider/customer/menu_provider.dart' as customer_menu;
 import 'package:table_order/provider/customer/cart_provider.dart';
 import 'package:table_order/provider/customer/order_provider.dart' as customer_order;
 
@@ -31,20 +31,27 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        // App state
         ChangeNotifierProvider(create: (_) => AppStateProvider()),
-        ChangeNotifierProvider(create: (_) => StoreProvider()),
-        ChangeNotifierProvider(create: (_) => MenuProvider()),
+
+        // Customer side providers
+        ChangeNotifierProvider(create: (_) => customer_store.StoreProvider()),
+        ChangeNotifierProvider(create: (_) => customer_menu.MenuProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
-        ChangeNotifierProvider(create: (_) => CategoryProvider()),
-        ChangeNotifierProvider(create: (_) => TableOrderProvider()),
-        ChangeNotifierProvider(create: (_) => TableConnectProvider()),
-        ChangeNotifierProvider(create: (_) => StoreInfoProvider()),
+        ChangeNotifierProvider(create: (_) => customer_order.OrderStatusViewModel()),
+
+        // Admin side providers (legacy - to be kept for backward compatibility)
         ChangeNotifierProvider(create: (_) => LoginProvider()),
+        ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => SystemAdminProvider()),
-        ChangeNotifierProvider(create: (_) => customer_order.OrderStatusViewModel()),
-        ChangeNotifierProvider(create: (_) => CallStaffProvider()),
-        ChangeNotifierProvider(create: (_) => admin_order.OrderProvider()),
+
+        // Admin side providers (new domain-based)
+        ChangeNotifierProvider(create: (_) => admin_menu.MenuProvider()),
+        ChangeNotifierProvider(create: (_) => admin_store.StoreProvider()),
+        ChangeNotifierProvider(create: (_) => admin_order_provider.OrderProvider()),
+        ChangeNotifierProvider(create: (_) => StaffRequestProvider()),
+        ChangeNotifierProvider(create: (_) => admin_order.OrderLogProvider()),
       ],
       child: const MyApp(),
     ),

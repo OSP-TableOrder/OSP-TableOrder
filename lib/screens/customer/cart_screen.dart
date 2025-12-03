@@ -73,9 +73,10 @@ class _CartScreenState extends State<CartScreen> {
             name: 'CartScreen',
           );
 
-          // 기존 영수증이 있으면 사용, 없으면 생성
+          // 1) Receipt 확보: 기존 영수증이 있으면 사용, 없으면 생성
+          // 이 단계에서는 Receipt만 생성/로드하고 Order는 아직 생성하지 않음
           if (orderProvider.receiptId == null) {
-            await orderProvider.initializeOrderForTable(
+            await orderProvider.initializeReceipt(
               storeId: storeId,
               tableId: tableId,
             );
@@ -85,7 +86,11 @@ class _CartScreenState extends State<CartScreen> {
             throw Exception('주문 생성에 실패했습니다.');
           }
 
-          // CartItem → OrderMenu 변환 후 주문에 추가
+          // 2) Order 생성: Receipt에 새로운 Order를 추가
+          // 첫 주문이든 추가 주문이든 항상 새로운 Order를 생성하여 Receipt.orders[]에 추가
+          await orderProvider.createOrder(storeId: storeId, tableId: tableId);
+
+          // 3) CartItem → OrderMenu 변환 후 주문에 추가
           for (final cartItem in cartItems) {
             final orderMenu = OrderMenu(
               id: '',
@@ -96,13 +101,13 @@ class _CartScreenState extends State<CartScreen> {
             );
 
             developer.log(
-              'Adding menu to order ${orderProvider.receiptId}: ${cartItem.menu.name} x ${cartItem.quantity}',
+              'Adding menu to current order: ${cartItem.menu.name} x ${cartItem.quantity}',
               name: 'CartScreen',
             );
             await orderProvider.addMenu(orderMenu);
           }
 
-          // 장바구니 비우기 및 성공 플래그 설정
+          // 4) 장바구니 비우기 및 성공 플래그 설정
           cartProvider.clear();
           orderPlaced = true;
           developer.log(

@@ -3,23 +3,23 @@ import 'package:table_order/models/customer/order_menu.dart';
 import 'package:table_order/server/customer_server/order_server.dart';
 
 class OrderService {
-  final OrderServerStub _server = OrderServerStub();
+  final OrderServer _server = OrderServer();
 
-  /// 새로운 주문 생성
-  Future<Order> createOrder({
+  /// Receipt 생성 (새로운 영수증 생성 또는 기존 미정산 영수증 조회)
+  Future<Order> createReceipt({
     required String storeId,
     required String tableId,
   }) async {
-    final order = await _server.createOrder(
+    final receipt = await _server.createOrder(
       storeId: storeId,
       tableId: tableId,
     );
 
-    if (order == null) {
-      throw Exception("주문 생성에 실패했습니다.");
+    if (receipt == null) {
+      throw Exception("영수증 생성에 실패했습니다.");
     }
 
-    return order;
+    return receipt;
   }
 
   /// 테이블의 미정산 주문 조회 (QR 코드 스캔 시 기존 주문 확인)
@@ -62,6 +62,26 @@ class OrderService {
     if (order == null) {
       throw Exception("주문을 찾을 수 없습니다.");
     }
+    return order;
+  }
+
+  /// Order 생성 (기존 Receipt에 새로운 Order 추가)
+  /// 첫 주문이든 추가 주문이든 항상 호출됨
+  Future<Order> createOrder({
+    required String receiptId,
+    required String storeId,
+    required String tableId,
+  }) async {
+    final order = await _server.createOrderForReceipt(
+      receiptId: receiptId,
+      storeId: storeId,
+      tableId: tableId,
+    );
+
+    if (order == null) {
+      throw Exception("주문 생성에 실패했습니다.");
+    }
+
     return order;
   }
 }

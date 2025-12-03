@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:table_order/models/customer/menu.dart';
+import 'package:table_order/widgets/common/platform_network_image.dart';
 
 class Tag extends StatelessWidget {
   final String content;
@@ -76,22 +77,17 @@ class _MenuItemState extends State<MenuItem> {
                       height: 120,
                       color: const Color(0xFFF0F0F0),
                       child: menu.imageUrl != null
-                          ? Image.network(
-                              menu.imageUrl!,
+                          ? PlatformNetworkImage(
+                              imageUrl: menu.imageUrl!,
                               fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return const Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(
-                                  Icons.image_not_supported,
-                                  color: Colors.grey,
-                                  size: 40,
-                                );
-                              },
+                              placeholder: const Center(
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              errorWidget: const Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey,
+                                size: 40,
+                              ),
                             )
                           : const Icon(
                               Icons.image_not_supported,

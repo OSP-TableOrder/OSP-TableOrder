@@ -40,7 +40,7 @@ class OrderHistoryTab extends StatelessWidget {
             child: Row(
               children: const [
                 Expanded(
-                  flex: 4,
+                  flex: 3,
                   child: Text("메뉴명", style: TextStyle(color: Colors.grey)),
                 ),
                 Expanded(
@@ -57,6 +57,14 @@ class OrderHistoryTab extends StatelessWidget {
                     "금액",
                     textAlign: TextAlign.right,
                     style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    "시간",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ),
                 Expanded(
@@ -89,6 +97,30 @@ class OrderHistoryTab extends StatelessWidget {
                       final qty = item is Map ? item['quantity'] : 1;
                       final price = item is Map ? item['price'] : 0;
                       final status = item is Map ? item['status'] ?? 'ORDERED' : 'ORDERED';
+
+                      // orderedAt을 안전하게 처리 (DateTime 또는 String 가능) - HH:mm 형식
+                      String? orderedAtStr;
+                      if (item is Map && item['orderedAt'] != null) {
+                        final orderedAtValue = item['orderedAt'];
+                        DateTime? dateTime;
+
+                        if (orderedAtValue is String) {
+                          try {
+                            dateTime = DateTime.parse(orderedAtValue);
+                          } catch (_) {
+                            orderedAtStr = orderedAtValue;
+                          }
+                        } else if (orderedAtValue is DateTime) {
+                          dateTime = orderedAtValue;
+                        }
+
+                        if (dateTime != null) {
+                          final hour = dateTime.hour.toString().padLeft(2, '0');
+                          final minute = dateTime.minute.toString().padLeft(2, '0');
+                          orderedAtStr = '$hour:$minute';
+                        }
+                      }
+
                       final total = price * qty;
 
                       final statusLabel = _getStatusLabel(status);
@@ -99,7 +131,7 @@ class OrderHistoryTab extends StatelessWidget {
                         child: Row(
                           children: [
                             Expanded(
-                              flex: 4,
+                              flex: 3,
                               child: Text(
                                 name,
                                 style: const TextStyle(fontSize: 16),
@@ -119,6 +151,14 @@ class OrderHistoryTab extends StatelessWidget {
                                 "$total원",
                                 textAlign: TextAlign.right,
                                 style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                orderedAtStr ?? "-",
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 12),
                               ),
                             ),
                             Expanded(

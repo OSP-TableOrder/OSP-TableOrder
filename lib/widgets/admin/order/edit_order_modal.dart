@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_order/models/admin/table_order_info.dart';
 import 'package:table_order/models/common/order_menu_status.dart';
-import 'package:table_order/provider/admin/table_order_provider.dart';
+import 'package:table_order/provider/admin/order_provider.dart';
 import 'package:table_order/widgets/admin/order/add_order_modal.dart';
 import 'package:table_order/widgets/admin/order/edit_quantity_modal.dart';
 
@@ -46,27 +46,55 @@ class _EditOrderModalState extends State<EditOrderModal> {
 
     if (result != null && result.isNotEmpty) {
       if (!mounted) return;
-      final provider = context.read<TableOrderProvider>();
 
-      // 선택된 메뉴들을 Provider에 추가 (이것이 카드뷰 등 모든 곳에 반영됨)
-      for (var item in result) {
-        final menu = item['menu'] as Map<String, dynamic>;
-        final quantity = item['quantity'] as int;
+      developer.log(
+        'Adding ${result.length} menu item(s) to receipt ${widget.table.orders[widget.orderIndex].orderId}',
+        name: 'EditOrderModal',
+      );
 
-        await provider.addMenuItemWithMenu(
-          widget.tableIndex,
-          widget.orderIndex,
-          menu,
-          quantity,
-        );
+      final provider = context.read<OrderProvider>();
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+      // 선택된 메뉴들을 주문에 추가
+      for (final menuData in result) {
+        try {
+          // AddOrderModal에서 반환하는 형식: { menu: {...}, quantity: n }
+          final menu = menuData['menu'] as Map<String, dynamic>;
+          final quantity = menuData['quantity'] as int? ?? 1;
+
+          developer.log(
+            'Menu to add: ${menu['name']}, quantity: $quantity',
+            name: 'EditOrderModal',
+          );
+
+          // 메뉴 추가 API 호출 (OrderService를 통해 Receipts 컬렉션 업데이트)
+          await provider.addMenuToReceipt(
+            tableIndex: widget.tableIndex,
+            orderIndex: widget.orderIndex,
+            menuData: {
+              ...menu,
+              'quantity': quantity,
+            },
+          );
+        } catch (e) {
+          developer.log('Error adding menu: $e', name: 'EditOrderModal');
+          final menuName = (menuData['menu'] as Map<String, dynamic>?)?['name'] ?? '메뉴';
+          scaffoldMessenger.showSnackBar(
+            SnackBar(content: Text('메뉴 추가 실패: $menuName')),
+          );
+        }
       }
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('${result.length}개 메뉴가 추가되었습니다.')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     // Provider.watch를 통해 데이터 변경 시 UI 자동 갱신
-    final table = context.watch<TableOrderProvider>().tables[widget.tableIndex];
+    final table = context.watch<OrderProvider>().tables[widget.tableIndex];
 
     // orderIndex가 유효한지 확인
     if (widget.orderIndex < 0 || widget.orderIndex >= table.orders.length) {
@@ -113,8 +141,10 @@ class _EditOrderModalState extends State<EditOrderModal> {
                         item is Map ? item['name'] : item.toString();
                     final int quantity =
                         item is Map ? (item['quantity'] ?? 1) : 1;
-                    final String status =
-                        item is Map ? (item['status'] ?? 'ORDERED') : 'ORDERED';
+                    final String rawStatus =
+                        item is Map ? (item['status'] ?? 'ordered') : 'ordered';
+                    // Normalize status to uppercase for consistent handling
+                    final String status = rawStatus.toUpperCase();
 
                     final menuStatus = orderMenuStatusFromCode(status);
                     final nextStatuses = _getNextStatuses(status);
@@ -185,7 +215,7 @@ class _EditOrderModalState extends State<EditOrderModal> {
                                             currentQuantity: quantity,
                                             onConfirm: (newQuantity) async {
                                               await context
-                                                  .read<TableOrderProvider>()
+                                                  .read<OrderProvider>()
                                                   .updateMenuQuantity(
                                                     widget.tableIndex,
                                                     widget.orderIndex,
@@ -247,7 +277,7 @@ class _EditOrderModalState extends State<EditOrderModal> {
                                         child: ElevatedButton(
                                           onPressed: () async {
                                             final provider = context
-                                                .read<TableOrderProvider>();
+                                                .read<OrderProvider>();
                                             await provider.updateMenuStatus(
                                               widget.tableIndex,
                                               widget.orderIndex,
@@ -309,11 +339,11 @@ class _EditOrderModalState extends State<EditOrderModal> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () async {
-                    final provider = context.read<TableOrderProvider>();
+                    final provider = context.read<OrderProvider>();
                     final navigator = Navigator.of(context);
                     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-                    final success = await provider.settleOrder(widget.tableIndex, widget.orderIndex);
+                    final success = await provider.settleReceipt(widget.tableIndex, widget.orderIndex);
 
                     if (!mounted) return;
                     if (success) {

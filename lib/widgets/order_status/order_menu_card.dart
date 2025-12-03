@@ -4,6 +4,7 @@ import 'package:table_order/models/customer/order_menu.dart';
 import 'package:table_order/models/common/order_menu_status.dart';
 import 'package:table_order/utils/won_formatter.dart';
 import 'package:table_order/widgets/order_status/order_status_tag.dart';
+import 'package:table_order/widgets/common/platform_network_image.dart';
 
 class OrderMenuCard extends StatelessWidget {
   final OrderMenu orderMenu;
@@ -40,20 +41,16 @@ class OrderMenuCard extends StatelessWidget {
               width: 80,
               height: 80,
               child: orderMenu.menu.imageUrl != null
-                  ? Image.network(
-                      orderMenu.menu.imageUrl!,
+                  ? PlatformNetworkImage(
+                      imageUrl: orderMenu.menu.imageUrl!,
                       fit: BoxFit.cover,
                       cacheWidth: 144,
                       cacheHeight: 144,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const ColoredBox(color: Color(0xFFF6F7F9));
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        );
-                      },
+                      placeholder: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      errorWidget:
+                          const ColoredBox(color: Color(0xFFF6F7F9)),
                     )
                   : const ColoredBox(color: Color(0xFFF6F7F9)),
             ),

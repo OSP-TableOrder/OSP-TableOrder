@@ -43,6 +43,7 @@ class MenuService {
 
     for (final category in activeCategories) {
       result.add({
+        'categoryId': category.id,
         'category': category.name,
         'items': grouped[category.id]!,
       });
@@ -51,7 +52,7 @@ class MenuService {
     // 카테고리가 없는 메뉴들 (null 또는 매칭 안 되는 경우)
     grouped.forEach((categoryId, items) {
       if (categoryId == null || !categoryMap.containsKey(categoryId)) {
-        result.add({'category': null, 'items': items});
+        result.add({'categoryId': null, 'category': null, 'items': items});
       }
     });
 

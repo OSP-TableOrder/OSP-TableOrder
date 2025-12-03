@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:table_order/models/customer/menu.dart';
 import 'package:table_order/screens/customer/menu_detail_screen.dart';
+import 'package:table_order/widgets/common/platform_network_image.dart';
 
 class MenuItemCard extends StatelessWidget {
   final Menu item;
@@ -38,28 +39,17 @@ class MenuItemCard extends StatelessWidget {
                     height: 100,
                     color: Colors.grey[200],
                     child: item.imageUrl != null
-                        ? Image.network(
-                            item.imageUrl!,
+                        ? PlatformNetworkImage(
+                            imageUrl: item.imageUrl!,
                             fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.restaurant,
-                                size: 40,
-                                color: Colors.grey[600],
-                              );
-                            },
+                            placeholder: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            errorWidget: Icon(
+                              Icons.restaurant,
+                              size: 40,
+                              color: Colors.grey[600],
+                            ),
                           )
                         : Icon(
                             Icons.restaurant,
